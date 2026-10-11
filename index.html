@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <!-- 适配手机端 -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智学江畔——江财学子的AI伴学+生活助手</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- ===== 顶部标语条 ===== -->
+  <div class="slogan-bar">AI × 教育 × 生活——你的专属校园助手</div>
+
+  <!-- ===== 顶部导航栏 ===== -->
+  <nav class="navbar">
+    <div class="nav-inner">
+      <!-- 左侧 Logo -->
+      <a class="logo" href="#home" data-view="home">
+        <span class="logo-mark">智</span>
+        <span class="logo-text">智学江畔<small>AI伴学 × 校园生活通</small></span>
+      </a>
+      <!-- 移动端汉堡菜单按钮 -->
+      <button class="nav-toggle" id="navToggle" aria-label="展开菜单">☰</button>
+      <!-- 导航链接 -->
+      <ul class="nav-links" id="navLinks">
+        <li><a href="#home" data-view="home" class="active">首页</a></li>
+        <li><a href="#planner" data-view="planner">AI规划助手</a></li>
+        <li><a href="#courses" data-view="courses">课程中心</a></li>
+        <li><a href="#life" data-view="life">生活通</a></li>
+        <li><a href="#about" data-view="about">关于我们</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <main>
+    <!-- ================= 视图一：首页 ================= -->
+    <section id="view-home" class="view active">
+
+      <!-- Hero 区域：左文右图 -->
+      <div class="hero container">
+        <div class="hero-text">
+          <span class="hero-eyebrow">江西财经大学 · 虚拟现实（VR）现代产业学院</span>
+          <h1>智学江畔</h1>
+          <p class="hero-sub">江财学子的AI伴学+生活助手</p>
+          <p class="hero-desc">
+            输入目标，生成你的四年成长路线；不懂就问，高数、线代、C++有问必答；
+            生活琐事，医保办事一站搞定。
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-primary" data-goto="planner">立即生成学习规划</button>
+            <button class="btn btn-ghost" data-goto="courses">去课程中心提问</button>
+          </div>
+        </div>
+
+        <!-- 右侧插画：大脑 + 学情分析柱状图的 SVG 示意图 -->
+        <div class="hero-art" aria-hidden="true">
+          <svg viewBox="0 0 460 400" xmlns="http://www.w3.org/2000/svg">
+            <!-- 背景光晕与轨道 -->
+            <circle cx="230" cy="190" r="170" fill="#1B2A4A" opacity="0.05"/>
+            <circle cx="230" cy="190" r="150" fill="none" stroke="#C9A227" stroke-width="1.5" stroke-dasharray="4 8" opacity="0.5"/>
+            <!-- 漂浮装饰点 -->
+            <circle cx="70" cy="60" r="8" fill="#C9A227" opacity="0.5"/>
+            <circle cx="396" cy="52" r="5" fill="#9E1B32" opacity="0.4"/>
+            <circle cx="412" cy="150" r="7" fill="#C9A227" opacity="0.35"/>
+            <circle cx="52" cy="150" r="5" fill="#9E1B32" opacity="0.35"/>
+
+            <!-- 大脑：多个圆形叠加成脑形剪影 -->
+            <g fill="#9E1B32">
+              <circle cx="185" cy="82" r="36"/>
+              <circle cx="226" cy="62" r="40"/>
+              <circle cx="265" cy="76" r="34"/>
+              <circle cx="286" cy="102" r="26"/>
+              <circle cx="243" cy="106" r="32"/>
+              <circle cx="200" cy="108" r="32"/>
+              <circle cx="162" cy="110" r="28"/>
+              <circle cx="205" cy="128" r="24"/>
+              <circle cx="248" cy="126" r="22"/>
+              <rect x="223" y="140" width="15" height="22" rx="6"/>
+            </g>
+            <!-- 脑沟纹理（深色弧线） -->
+            <g fill="none" stroke="#7A1428" stroke-width="5" stroke-linecap="round">
+              <path d="M170 74 q13 11 0 24"/>
+              <path d="M205 58 q15 13 2 28"/>
+              <path d="M238 52 q13 15 0 30"/>
+              <path d="M268 70 q11 13 -2 24"/>
+              <path d="M182 110 q15 9 31 2"/>
+              <path d="M230 100 q13 11 28 5"/>
+            </g>
+            <!-- 金色电路节点：大脑与学情数据相连 -->
+            <g stroke="#C9A227" stroke-width="2.5">
+              <line x1="210" y1="164" x2="210" y2="196"/>
+              <line x1="255" y1="164" x2="255" y2="190"/>
+            </g>
+            <circle cx="210" cy="172" r="4" fill="#C9A227"/>
+            <circle cx="210" cy="186" r="4" fill="#C9A227"/>
+            <circle cx="255" cy="176" r="4" fill="#C9A227"/>
+
+            <!-- 学情分析柱状图：坐标轴 + 递升柱 + 趋势线 -->
+            <g>
+              <line x1="70" y1="336" x2="350" y2="336" stroke="#1B2A4A" stroke-width="4" stroke-linecap="round"/>
+              <line x1="70" y1="336" x2="70" y2="180" stroke="#1B2A4A" stroke-width="4" stroke-linecap="round"/>
+              <!-- 四根柱（深蓝，最后一根江财红） -->
+              <rect x="92"  y="282" width="40" height="54"  rx="6" fill="#1B2A4A"/>
+              <rect x="146" y="254" width="40" height="82"  rx="6" fill="#1B2A4A"/>
+              <rect x="200" y="222" width="40" height="114" rx="6" fill="#1B2A4A"/>
+              <rect x="254" y="192" width="40" height="144" rx="6" fill="#9E1B32"/>
+              <!-- 金色趋势线 -->
+              <polyline points="112,272 166,244 220,212 274,182" fill="none" stroke="#C9A227" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+              <polygon points="274,182 262,186 272,196" fill="#C9A227"/>
+              <!-- 柱顶数值点 -->
+              <circle cx="112" cy="272" r="5" fill="#C9A227"/>
+              <circle cx="166" cy="244" r="5" fill="#C9A227"/>
+              <circle cx="220" cy="212" r="5" fill="#C9A227"/>
+              <circle cx="274" cy="182" r="5" fill="#C9A227"/>
+              <!-- 基座金条 -->
+              <rect x="140" y="352" width="180" height="9" rx="4.5" fill="#C9A227" opacity="0.8"/>
+            </g>
+          </svg>
+        </div>
+      </div>
+
+      <!-- 数据统计条（展示用，数字滚动动画） -->
+      <div class="stats container">
+        <div class="stat-item">
+          <span class="stat-num" data-target="25" data-suffix="">0</span>
+          <span class="stat-label">收录学校官方文件（份）</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num" data-target="3" data-suffix="">0</span>
+          <span class="stat-label">核心功能模块（个）</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-num" data-target="12" data-suffix="">0</span>
+          <span class="stat-label">医保场景问答覆盖（类）</span>
+        </div>
+      </div>
+
+      <!-- 功能卡片入口 -->
+      <div class="features container">
+        <div class="feature-card card" data-goto="planner" role="button" tabindex="0">
+          <div class="feature-icon icon-red">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+          </div>
+          <h3>AI学习规划</h3>
+          <p>输入你的目标，生成四年成长路线</p>
+          <span class="feature-more">进入模块 →</span>
+        </div>
+        <div class="feature-card card" data-goto="courses" data-tab="chat" role="button" tabindex="0">
+          <div class="feature-icon icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          </div>
+          <h3>课程智能问答</h3>
+          <p>高数、线代、C++，有问必答</p>
+          <span class="feature-more">进入模块 →</span>
+        </div>
+        <div class="feature-card card" data-goto="courses" data-tab="analytics" role="button" tabindex="0">
+          <div class="feature-icon icon-gold">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><rect x="7" y="12" width="3" height="6"/><rect x="12" y="8" width="3" height="10"/><rect x="17" y="5" width="3" height="13"/></svg>
+          </div>
+          <h3>学情分析引擎</h3>
+          <p>分析学习数据，动态调整学习路径</p>
+          <span class="feature-more">进入模块 →</span>
+        </div>
+        <!-- 新增：生活通功能入口 -->
+        <div class="feature-card card" data-goto="life" role="button" tabindex="0">
+          <div class="feature-icon icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
+          </div>
+          <h3>生活通</h3>
+          <p>医保报销、校园办事、部门指引</p>
+          <span class="feature-more">进入模块 →</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 视图二：AI学习规划助手 ================= -->
+    <section id="view-planner" class="view">
+      <div class="container">
+        <div class="section-head">
+          <h2>AI学习规划助手</h2>
+          <p>完成下方四步输入，规则引擎将为你生成一份专属的四年成长路线</p>
+        </div>
+
+        <!-- 第一步：信息表单 -->
+        <form id="planForm" class="card form-card" novalidate>
+          <div class="form-grid">
+            <!-- 1. 年级 -->
+            <div class="form-item">
+              <label>1. 你目前的年级</label>
+              <div class="option-group" id="groupGrade">
+                <button type="button" class="option" data-value="大一">大一</button>
+                <button type="button" class="option" data-value="大二">大二</button>
+                <button type="button" class="option" data-value="大三">大三</button>
+                <button type="button" class="option" data-value="大四">大四</button>
+              </div>
+            </div>
+            <!-- 2. 目标 -->
+            <div class="form-item">
+              <label>2. 你的毕业目标</label>
+              <div class="option-group" id="groupGoal">
+                <button type="button" class="option" data-value="baoyan">保研</button>
+                <button type="button" class="option" data-value="kaoyan">考研</button>
+                <button type="button" class="option" data-value="chuguo">出国</button>
+                <button type="button" class="option" data-value="jiuye">就业</button>
+              </div>
+            </div>
+            <!-- 3. GPA 水平 -->
+            <div class="form-item">
+              <label>3. 当前 GPA 水平</label>
+              <div class="option-group" id="groupGpa">
+                <button type="button" class="option" data-value="3.0以下">3.0 以下</button>
+                <button type="button" class="option" data-value="3.0-3.5">3.0 - 3.5</button>
+                <button type="button" class="option" data-value="3.5-3.8">3.5 - 3.8</button>
+                <button type="button" class="option" data-value="3.8以上">3.8 以上</button>
+              </div>
+            </div>
+            <!-- 4. 每周学习小时数 -->
+            <div class="form-item">
+              <label for="hoursInput">4. 每周可投入学习小时数</label>
+              <div class="hours-wrap">
+                <input type="number" id="hoursInput" min="1" max="80" placeholder="例如：15">
+                <span class="hours-unit">小时 / 周</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 错误提示（未填完整时显示） -->
+          <p class="form-error" id="formError" hidden>请把四个选项都填完整，再生成规划～</p>
+
+          <div class="form-actions">
+            <button class="btn btn-primary btn-lg" type="submit">生成我的规划</button>
+            <p class="form-tip">基于知识库检索 + 规则引擎，响应速度毫秒级</p>
+          </div>
+        </form>
+
+        <!-- 第二步：规划结果（点击生成后由 JS 填充） -->
+        <div id="planResult" class="plan-result" hidden></div>
+      </div>
+    </section>
+
+    <!-- ================= 视图三：课程中心 ================= -->
+    <section id="view-courses" class="view">
+      <div class="container">
+        <div class="section-head">
+          <h2>课程中心</h2>
+          <p>智能问答 · 学情分析</p>
+        </div>
+
+        <!-- 子标签页切换 -->
+        <div class="tab-bar">
+          <button class="tab active" data-tab="chat">智能问答</button>
+          <button class="tab" data-tab="analytics">学情分析引擎</button>
+        </div>
+
+        <!-- 标签页 1：课程智能问答 -->
+        <div id="tab-chat" class="tab-panel active">
+          <p class="demo-note">基于学校官方文件的知识库检索，已预留大语言模型API接口</p>
+
+          <div class="chat-window card">
+            <!-- 聊天头部 -->
+            <div class="chat-header">
+              <div class="chat-avatar">智</div>
+              <div class="chat-title">
+                <strong>智学江畔 AI 助教</strong>
+                <span class="chat-status">● 在线 · 知识库检索模式</span>
+              </div>
+              <button class="chat-clear" id="chatClear" title="清空对话">清空</button>
+            </div>
+            <!-- 消息列表 -->
+            <div class="chat-body" id="chatBody"></div>
+            <!-- 快捷提问 -->
+            <div class="chat-chips" id="chatChips"></div>
+            <!-- 输入区 -->
+            <div class="chat-input-row">
+              <input type="text" id="chatInput" placeholder="请输入你的问题，如：高数怎么学" autocomplete="off">
+              <button class="btn btn-primary" id="chatSend">发送</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 标签页 2：学情分析引擎（替换原VR课堂展望） -->
+        <div id="tab-analytics" class="tab-panel">
+          <p class="demo-note">学情分析基于本地会话数据，隐私安全零上传</p>
+
+          <div class="ana-wrap container">
+            <!-- a) 学习数据录入区 -->
+            <form id="anaForm" class="card ana-form" novalidate>
+              <h3>学习数据录入</h3>
+              <div class="ana-grid">
+                <div class="form-item">
+                  <label for="anaHours">本周学习小时数</label>
+                  <div class="hours-wrap">
+                    <input type="number" id="anaHours" min="0" max="80" placeholder="例如：15">
+                    <span class="hours-unit">小时</span>
+                  </div>
+                </div>
+                <div class="form-item">
+                  <label for="anaCourses">本周完成课程数</label>
+                  <div class="hours-wrap">
+                    <input type="number" id="anaCourses" min="0" max="30" placeholder="例如：4">
+                    <span class="hours-unit">门</span>
+                  </div>
+                </div>
+                <div class="form-item">
+                  <label for="anaAccuracy">自测正确率</label>
+                  <div class="hours-wrap">
+                    <input type="number" id="anaAccuracy" min="0" max="100" placeholder="例如：75">
+                    <span class="hours-unit">%</span>
+                  </div>
+                </div>
+                <div class="form-item">
+                  <label for="anaConfused">本周困惑知识点（选填）</label>
+                  <input type="text" id="anaConfused" class="ana-text" placeholder="例如：高数泰勒公式、线代矩阵乘法" autocomplete="off">
+                </div>
+              </div>
+              <p class="form-error" id="anaError" hidden>请填写前三项有效数据（小时0-80、课程0-30、正确率0-100）～</p>
+              <div class="form-actions">
+                <button class="btn btn-primary btn-lg" type="submit">生成学情分析</button>
+              </div>
+            </form>
+
+            <!-- b)c)d) 分析结果、趋势图、规划联动（由 JS 渲染） -->
+            <div id="anaResult" class="ana-result" hidden></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 视图四：生活通（新增） ================= -->
+    <section id="view-life" class="view">
+      <div class="container">
+        <div class="section-head">
+          <h2>生活通</h2>
+          <p>医保报销 · 校园办事 · 部门指引</p>
+        </div>
+
+        <!-- 子标签页切换（复用现有 .tab 样式与切换逻辑） -->
+        <div class="tab-bar">
+          <button class="tab active" data-tab="life-yibao">医保报销</button>
+          <button class="tab" data-tab="life-banshi">校园办事</button>
+          <button class="tab" data-tab="life-dept">部门指引</button>
+        </div>
+
+        <!-- 生活通 子页 1：医保报销（问答窗口） -->
+        <div id="tab-life-yibao" class="tab-panel active">
+          <p class="demo-note">内容基于校医保办历年正式文件整理 · 标注[需人工核实时效]的条目请以最新政策为准</p>
+          <div class="chat-window card">
+            <div class="chat-header">
+              <div class="chat-avatar green">医</div>
+              <div class="chat-title">
+                <strong>江财医保助手</strong>
+                <span class="chat-status">● 在线 · 知识库检索模式</span>
+              </div>
+              <button class="chat-clear" id="lifeChatClear" title="清空对话">清空</button>
+            </div>
+            <div class="chat-body" id="lifeChatBody"></div>
+            <div class="chat-chips" id="lifeChatChips"></div>
+            <div class="chat-input-row">
+              <input type="text" id="lifeChatInput" placeholder="请输入你的问题，如：异地住院怎么报销" autocomplete="off">
+              <button class="btn btn-primary" id="lifeChatSend">发送</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 生活通 子页 2：校园办事（卡片式，点击展开详情） -->
+        <div id="tab-life-banshi" class="tab-panel">
+          <p class="demo-note">教务类办事指南将随第二批文件处理后持续更新 · 标注"整理中"的条目请以学校官方通知为准</p>
+          <div class="life-grid">
+            <div class="life-card card" role="button" tabindex="0">
+              <div class="life-card-head">
+                <span class="life-card-icon icon-red">补</span>
+                <h4>学生证补办</h4>
+                <span class="life-card-arrow">▾</span>
+              </div>
+              <div class="life-card-body">
+                <p>【依据】补办学生证申请书格式（教务处）</p>
+                <p>流程：①填写《补办学生证申请书》（写明丢失原因、个人信息）→ ②到学院教务办审核盖章 → ③携带申请书、一寸照片、身份证到教务处学籍管理科办理 → ④缴纳工本费（10-20元）→ ⑤1-2个工作日后领取新证</p>
+                <p>注意：学生证是火车票优惠的重要凭证，请妥善保管；每学期开学需持学生证到学院注册盖章。</p>
+              </div>
+            </div>
+            <div class="life-card card" role="button" tabindex="0">
+              <div class="life-card-head">
+                <span class="life-card-icon icon-blue">考</span>
+                <h4>四六级报名</h4>
+                <span class="life-card-arrow">▾</span>
+              </div>
+              <div class="life-card-body">
+                <p>【依据】教务通知字［2020］57号（2020.6.18）</p>
+                <p>条件：在籍全日制本科生、研究生；修完四级课程可报CET4；CET4≥425且修完六级课程可报CET6；四六级不同批次报、严禁跨校报考。</p>
+                <p>报名：CET全国网上报名网站 cet-bm.neea.edu.cn（2020年为7月3日—7月10日，以当年通知为准 [需人工核实时效]）；注册后24小时内须缴费。</p>
+                <p>流程：注册→登录→资格验证→笔试缴费→口试缴费→报名成功；考前自行打印准考证；咨询：教务处83816509（赵老师）。</p>
+              </div>
+            </div>
+            <div class="life-card card" role="button" tabindex="0">
+              <div class="life-card-head">
+                <span class="life-card-icon icon-gold">历</span>
+                <h4>校历查询</h4>
+                <span class="life-card-arrow">▾</span>
+              </div>
+              <div class="life-card-body">
+                <p>【依据】2019-2020学年校历表、201学期校历表</p>
+                <p>关键时间节点：</p>
+                <p>· 2019-2020学年暑假放假：2020年7月18日<br>· 2020年秋季学期（201学期）开学：9月6日报到，9月7日正式上课<br>· 学期周数：正常18-20周（含考试周）<br>· 寒假：通常1月下旬至2月底（4-6周）</p>
+                <p>提示：完整校历请查阅教务处官网或教务系统（jwxt.jxufe.edu.cn）</p>
+              </div>
+            </div>
+            <div class="life-card card" role="button" tabindex="0">
+              <div class="life-card-head">
+                <span class="life-card-icon icon-green">评</span>
+                <h4>评教操作</h4>
+                <span class="life-card-arrow">▾</span>
+              </div>
+              <div class="life-card-body">
+                <p>【依据】教务通知字〔2020〕54号（2020.6.8，192学期版）</p>
+                <p>入口：学校主页→数字校园→本科教学评教系统（校园网 172.29.5.184/framework/sso/login），账号为一卡通号；浏览器用谷歌/火狐/360极速模式，勿用IE。</p>
+                <p>步骤：登录→点"评教"→"立刻评价"→提交（不提交无效）→可"查看评价"修改（须点"确认修改"）→确认数据上传成功；所有课程评完才算完成。</p>
+                <p>注意：不按时评教将取消学分制系统查询权利。系统问题：张荣18702604733 / 罗雯18702628437。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 生活通 子页 3：部门指引（办公地点与电话） -->
+        <div id="tab-life-dept" class="tab-panel">
+          <p class="demo-note">部门信息整理自校医保办、南昌市医保处历年文件 · 标注[需人工核实时效]的号码请以最新公布为准</p>
+          <div class="dept-list" id="deptList"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 视图五：关于我们 ================= -->
+    <section id="view-about" class="view">
+      <div class="container">
+        <div class="section-head">
+          <h2>关于我们</h2>
+          <p>2026年iCAN大学生创新创业大赛参赛作品</p>
+        </div>
+
+        <!-- 项目简介 -->
+        <div class="card about-card">
+          <h3>项目简介</h3>
+          <p>
+            「智学江畔」是面向江西财经大学学生的 AI 伴学+生活助手平台，以“AI × 教育 × 生活”为核心理念，
+            现阶段提供三大核心功能：①<b>AI学习规划生成</b>——输入目标即生成四年成长路线；
+            ②<b>课程智能问答</b>——高数、线代、C++有问必答；
+            ③<b>生活通</b>——基于学校25份官方文件，覆盖医保报销、校园办事、部门指引等高频生活场景。
+          </p>
+        </div>
+
+        <!-- 技术路线图 -->
+        <div class="about-steps">
+          <div class="card step-card">
+            <span class="step-num">01</span>
+            <h4>轻量化知识引擎版（当前）</h4>
+            <p>基于语义匹配的知识库检索 + 规则引擎规划，零服务器依赖，毫秒级响应。</p>
+          </div>
+          <div class="card step-card">
+            <span class="step-num">02</span>
+            <h4>大模型接入版</h4>
+            <p>接入大语言模型API，实现开放式问答、深度个性化规划与多轮上下文理解。</p>
+          </div>
+          <div class="card step-card">
+            <span class="step-num">03</span>
+            <h4>智能学情版</h4>
+            <p>基于学习数据分析，动态优化推荐算法，实现真正的因材施教。</p>
+          </div>
+        </div>
+
+        <!-- 团队信息 -->
+        <div class="card about-card">
+          <h3>团队信息</h3>
+          <p>
+            团队来自<b>江西财经大学虚拟现实（VR）现代产业学院</b>，涵盖 VR 开发、前端工程与教育学背景成员，
+            致力于用新技术解决同学真实的学业痛点。欢迎通过邮件与我们交流：<b>zhixue@jxufe.edu.cn</b>。
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== 页脚 ===== -->
+  <footer class="footer">
+    <p>2026年iCAN大学生创新创业大赛参赛作品 · 江西财经大学虚拟现实（VR）现代产业学院</p>
+    <p class="footer-sub">智学江畔团队 · 让每位江财学子都有自己的 AI 学习伙伴</p>
+  </footer>
+
+  <!-- 先加载数据，再加载逻辑 -->
+  <script src="js/data.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
