@@ -62,7 +62,7 @@
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         signal: ctrl ? ctrl.signal : undefined,
-        body: JSON.stringify({ model: cfg.MODEL || 'moonshot-v1-8k', messages: messages, temperature: 0.3 })
+        body: JSON.stringify({ model: cfg.MODEL || 'kimi-k2.6', messages: messages })
       }).then(function (r) {
         clearTimeout(timer);
         if (!r.ok) throw new Error('HTTP ' + r.status);

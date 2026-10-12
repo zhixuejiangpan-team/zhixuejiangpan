@@ -797,7 +797,7 @@
   function aiState(state, payload) {
     aiCard.hidden = false;
     if (state === 'loading') {
-      aiCard.innerHTML = '<div class="ai-head">🤖 AI 回答</div><p class="ai-loading">正在咨询 AI…</p>';
+      aiCard.innerHTML = '<div class="ai-head">🤖 AI 回答</div><p class="ai-loading">正在咨询 AI（推理模型，约需 1 分钟）…</p>';
     } else if (state === 'unconfigured') {
       aiCard.innerHTML = '<div class="ai-head">🤖 AI 未配置</div><p class="ai-text">' +
         '请启动本地代理（<code>node server.js</code>），并在 js/config.js 填入 AI_CONFIG.PROXY_URL 与 API_KEY 后使用在线 AI 问答。本地知识库搜索不受影响。</p>';

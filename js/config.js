@@ -13,12 +13,12 @@ window.AMAP_KEY = '68c803d0b796714e0613f165678e3f08';
 window.AMAP_SECURITY_JS_CODE = '571063ca0b165cfa6b33557071197d98';
 
 window.AI_CONFIG = {
-  API_KEY: ' sk-dhX1kCd3f3n853WUuUyVUdPU1H6g93TGPS6SWCZWQshnMLPm ',  // 
-  MODEL: 'moonshot-v1-8k',
+  API_KEY: 'sk-Dm4S88Y0B8T20ZWlbuwkUwbN2x11cqtYgGpOx5MdFrnBgj7C',  // TODO: 填入 Moonshot API Key（sk- 开头）
+  MODEL: 'kimi-k2.6',             // 可用模型见 GET /v1/models（本账户：kimi-k2.6 / kimi-k2.7-code）
   ENDPOINT: 'https://api.moonshot.cn/v1/chat/completions',
   PROXY_URL: 'http://localhost:3001/ai',      // TODO: 必填，本地代理地址（如 'http://localhost:3001/ai'）
   MAX_CONTEXT: 5,
-  TIMEOUT: 15000,
+  TIMEOUT: 120000,                 // kimi-k2.6 为推理模型，实测响应约60-70s，120s 兜底
   SYSTEM_PROMPT: '你是"智行江畔"的江财校园生活助手。规则：1.优先基于本地知识库（js/data.js 的 spots/hotQuestions/workflows）回答，准确引用具体点位名和步骤；2.本地知识没有时基于通用知识回答并提示"建议向相关部门确认"；3.回答控制在 200 字内，办事类问题必须给出具体地点和步骤；4.涉及心理/医疗话题时，提供一般性支持信息（如告知校医院位置、心理咨询预约方式），但明确不作医疗诊断，并建议联系专业老师。'
 };
 
