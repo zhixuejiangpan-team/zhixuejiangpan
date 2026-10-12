@@ -60,7 +60,7 @@
       var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, cfg.TIMEOUT || 15000);
       fetch(cfg.PROXY_URL, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-App-Key': cfg.APP_KEY || '' },
         signal: ctrl ? ctrl.signal : undefined,
         body: JSON.stringify({ model: cfg.MODEL || 'kimi-k2.6', messages: messages })
       }).then(function (r) {
