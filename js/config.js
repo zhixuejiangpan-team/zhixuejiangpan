@@ -1,0 +1,26 @@
+/* ============================================================
+   智行江畔 V6.6+AI —— 全局配置（外部输入接口集中于此）
+   ------------------------------------------------------------
+   【高德地图】Key 已由团队申请并填入（Web端JS API）。
+     如需更换：将 AMAP_KEY / AMAP_SECURITY_JS_CODE 替换为新值；
+     域名白名单填 zhixuejiangpan-team.github.io 主域名（不含子路径）。
+     留空时地图视图自动显示申请指引占位层，不白屏不报错。
+   【AI】AI_CONFIG.API_KEY 与 AI_CONFIG.PROXY_URL 为必填 TODO：
+     本地运行 `node server.js` 启动代理（端口3001），再把 PROXY_URL
+     填为 'http://localhost:3001/ai'。前端严禁直连 api.moonshot.cn。
+   ============================================================ */
+window.AMAP_KEY = '68c803d0b796714e0613f165678e3f08';
+window.AMAP_SECURITY_JS_CODE = '571063ca0b165cfa6b33557071197d98';
+
+window.AI_CONFIG = {
+  API_KEY: ' sk-dhX1kCd3f3n853WUuUyVUdPU1H6g93TGPS6SWCZWQshnMLPm ',  // 
+  MODEL: 'moonshot-v1-8k',
+  ENDPOINT: 'https://api.moonshot.cn/v1/chat/completions',
+  PROXY_URL: 'http://localhost:3001/ai',      // TODO: 必填，本地代理地址（如 'http://localhost:3001/ai'）
+  MAX_CONTEXT: 5,
+  TIMEOUT: 15000,
+  SYSTEM_PROMPT: '你是"智行江畔"的江财校园生活助手。规则：1.优先基于本地知识库（js/data.js 的 spots/hotQuestions/workflows）回答，准确引用具体点位名和步骤；2.本地知识没有时基于通用知识回答并提示"建议向相关部门确认"；3.回答控制在 200 字内，办事类问题必须给出具体地点和步骤；4.涉及心理/医疗话题时，提供一般性支持信息（如告知校医院位置、心理咨询预约方式），但明确不作医疗诊断，并建议联系专业老师。'
+};
+
+window.TEAM_NAME = '智行江畔团队';
+window.SITE_VERSION = 'V6.6+AI';
