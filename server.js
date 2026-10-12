@@ -3,12 +3,13 @@
  * 前端把 AI_CONFIG.PROXY_URL 填为 http://localhost:3001/ai
  * 严禁前端直连 api.moonshot.cn（会被 CORS 拦截且暴露 Key）。 */
 const http = require('http');
-const KEY = process.env.MOONSHOT_KEY || 'sk-Dm4S88Y0B8T20ZWlbuwkUwbN2x11cqtYgGpOx5MdFrnBgj7C';
+const KEY = process.env.MOONSHOT_KEY;
 
 http.createServer((req, res) => {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
   if (req.method === 'OPTIONS') return res.end();
+  if (req.url === '/health') { res.statusCode = 200; return res.end('{"ok":true}'); }
   if (req.method !== 'POST' || req.url !== '/ai') { res.statusCode = 404; return res.end('{}'); }
   let body = '';
   req.on('data', c => body += c);
@@ -29,4 +30,4 @@ http.createServer((req, res) => {
       res.statusCode = 502; res.end(JSON.stringify({ error: String(e.message || e) }));
     }
   });
-}).listen(3001, () => console.log('AI proxy on http://localhost:3001/ai'));
+}).listen(process.env.PORT || 3001, () => console.log('AI proxy on http://localhost:' + (process.env.PORT || 3001) + '/ai'));
