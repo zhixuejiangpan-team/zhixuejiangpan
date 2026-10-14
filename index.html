@@ -13,7 +13,10 @@
   <!-- D3.js v7 与 ECharts：CDN 引入，本地不打包 -->
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
-  <link rel="stylesheet" href="css/style.css">
+  <!-- V7.2 Three.js r147 UMD 本地内置（file:// 直开可用、零 CDN 依赖，仅 OrbitControls 一个附加控件） -->
+  <script src="js/vendor/three.min.js?v=73l"></script>
+  <script src="js/vendor/OrbitControls.js?v=73l"></script>
+  <link rel="stylesheet" href="css/style.css?v=73l">
 </head>
 <body>
 
@@ -41,9 +44,11 @@
       <div class="container">
         <!-- 搜索框 + 实时建议 -->
         <div class="search-hero">
+          <p class="search-greet" id="searchGreet"></p>
           <h1>智行江畔</h1>
           <p class="search-sub">江财校园生活智能助手 · 搜问题、看路径、办事情</p>
           <div class="search-bar">
+            <span class="search-ico">🔍</span>
             <input type="text" id="searchInput" placeholder="输入你的问题，如：补办学生证 / 医保报销 / 食堂" autocomplete="off">
             <button class="btn btn-primary" id="searchBtn">搜索</button>
           </div>
@@ -60,55 +65,43 @@
         <div id="resultList" class="result-list"></div>
 
         <!-- 热点问题 Top10 -->
-        <div class="card block-card">
+        <div class="card block-card reveal">
           <h3>🔥 热点问题 Top10</h3>
           <div id="hotList"></div>
         </div>
 
         <!-- 搜索历史 -->
-        <div class="card block-card">
+        <div class="card block-card reveal">
           <h3>🕘 搜索历史</h3>
           <div id="historyChips" class="chip-row"></div>
         </div>
 
-        <!-- 问卷折叠面板（默认收起为一行标题） -->
-        <div class="card survey-panel" id="surveyPanel">
-          <div class="survey-header" id="surveyHeader">
-            <span>📊 需求调研验证（N=50）</span>
-            <span class="survey-arrow" id="surveyArrow">▸</span>
-          </div>
-          <div class="survey-body" id="surveyBody">
-            <div class="survey-grid">
-              <div class="survey-item"><h4 id="sqTitle-sq1"></h4><div class="survey-chart" id="chart-sq1"></div></div>
-              <div class="survey-item"><h4 id="sqTitle-sq2"></h4><div class="survey-chart" id="chart-sq2"></div></div>
-              <div class="survey-item"><h4 id="sqTitle-sq3"></h4><div class="survey-chart" id="chart-sq3"></div></div>
-              <div class="survey-item"><h4 id="sqTitle-sq4"></h4><div class="survey-chart" id="chart-sq4"></div></div>
-              <div class="survey-item"><h4 id="sqTitle-sq5"></h4><div class="survey-chart" id="chart-sq5"></div></div>
-              <div class="survey-item"><h4 id="sqTitle-sq6"></h4><div class="survey-chart" id="chart-sq6"></div></div>
-            </div>
-            <div class="survey-import">
-              <p class="survey-tip">粘贴问卷 JSON（数组，元素含 id 与 options[{text,count}]）后导入：</p>
-              <textarea id="surveyJson" rows="3" placeholder='[{"id":"sq1","options":[{"text":"300元以下","count":12},...]}]'></textarea>
-              <div class="survey-actions">
-                <button class="btn btn-primary" id="surveyImport">导入</button>
-                <button class="btn btn-ghost" id="surveyExport">导出当前数据</button>
-                <span id="surveyMsg" class="survey-msg"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- 力导向问题图谱 -->
-        <div class="card block-card">
+        <div class="card block-card reveal">
           <h3>🕸 高频问题力导向图谱</h3>
           <p class="graph-tip">节点大小=热度，橙色描边=涉及跨校区；点击节点查看详情</p>
           <div id="graphWrap" class="graph-wrap"></div>
+        </div>
+
+        <!-- 需求调研验证（V7.2-beta：从"我的"页迁入搜索页底部，折叠态一行不占主流程） -->
+        <div class="card survey-panel reveal" id="surveyPanel">
+          <div class="survey-header" id="surveyHeader">
+            <span>📊 需求调研验证（N=29）</span>
+            <span class="survey-arrow" id="surveyArrow">▸</span>
+          </div>
+          <div class="survey-body" id="surveyBody"></div>
         </div>
       </div>
     </section>
 
     <!-- ============ 视图二：地图 ============ -->
     <section id="view-map" class="view">
+      <div class="container">
+        <div class="view-head">
+          <h2>校园地图</h2>
+          <p id="mapHeadSub">实测坐标，三步走到任何办公室</p>
+        </div>
+      </div>
       <div class="map-wrap">
         <div id="mapBox"></div>
         <!-- 图层控制 -->
@@ -130,6 +123,11 @@
     <section id="view-guide" class="view">
       <div class="container">
         <div class="section-head"><h2>新生办事指南</h2><p>医保 / 校历 / 办事流程一站直达</p></div>
+        <!-- V6.7 指南页内搜索（不写入主搜索历史） -->
+        <div class="guide-search-wrap" id="guideSearchWrap">
+          <input type="text" id="guideSearch" placeholder="筛选本页内容..." autocomplete="off">
+          <button id="guideSearchClear" class="guide-search-clear" hidden>✕</button>
+        </div>
         <div class="tab-bar">
           <button class="tab active" data-tab="flows">办事流程</button>
           <button class="tab" data-tab="calendar">校历</button>
@@ -144,27 +142,42 @@
     <!-- ============ 视图四：我的 ============ -->
     <section id="view-mine" class="view">
       <div class="container">
+        <div class="view-head">
+          <h2>我的</h2>
+          <p>投票足迹、知识库成长与学习资源</p>
+        </div>
         <!-- 指南入口卡片（移动端为指南唯一入口） -->
-        <div class="card guide-entry" id="guideEntry" role="button" tabindex="0">
+        <div class="card guide-entry reveal" id="guideEntry" role="button" tabindex="0">
           <div class="ge-icon">📖</div>
           <div><h3>新生办事指南</h3><p>医保/校历/办事流程一站直达</p></div>
           <span class="ge-arrow">→</span>
         </div>
-        <div class="card block-card">
+        <div class="card block-card reveal">
           <h3>👍 我的投票记录</h3>
           <div id="mineVotes"></div>
         </div>
-        <div class="card block-card">
+        <div class="card block-card reveal">
           <h3>🕘 我的搜索历史</h3>
           <div id="mineHist" class="chip-row"></div>
         </div>
-        <div class="card block-card">
+        <div class="card block-card reveal">
           <h3>ℹ️ 项目简介</h3>
           <p class="mine-intro" id="mineTeam">智行江畔团队 · 江财校园生活智能助手：搜得到答案，看得见路径。</p>
           <p class="mine-ver" id="mineVer">版本号 V6.6+AI</p>
         </div>
+        <!-- V7.0 AI 知识库成长卡片：沉淀/命中/待补充 + 近7天新增柱状图 -->
+        <div class="card block-card kb-panel" id="kbPanel">
+          <h3>🧠 AI知识库成长 <span class="kb-badge" id="kbBadge" hidden>演示数据</span></h3>
+          <div class="kb-nums">
+            <div class="kb-num"><b id="kbCount">0</b><span>沉淀</span></div>
+            <div class="kb-num"><b id="kbHits">0</b><span>命中</span></div>
+            <div class="kb-num"><b id="kbPend">0</b><span>待补充</span></div>
+          </div>
+          <div class="kb-chart" id="kbChart"></div>
+          <p class="kb-note">统计自v7.0起 · 无时间戳的存量知识计入今日新增</p>
+        </div>
         <!-- 学习资源彩蛋（默认收起） -->
-        <div class="card study-panel" id="studyPanel">
+        <div class="card study-panel reveal" id="studyPanel">
           <div class="study-header" id="studyHeader">
             <span>📚 学习资源（彩蛋）</span>
             <span class="study-arrow" id="studyArrow">▸</span>
@@ -187,11 +200,13 @@
     <p class="footer-sub">本应用数据基于学校历年公开文件整理（2009-2020），具体政策与营业时间以学校最新通知为准。</p>
   </footer>
 
-  <script src="js/config.js?v=66ai2"></script>
-  <script src="js/data.js?v=66ai2"></script>
-  <script src="js/guide-data.js?v=66ai2"></script>
-  <script src="js/survey.js?v=66ai2"></script>
-  <script src="js/ai-service.js?v=66ai2"></script>
-  <script src="js/app.js?v=66ai2"></script>
+  <script src="js/config.js?v=73l"></script>
+  <script src="js/data.js?v=73l"></script>
+  <script src="js/guide-data.js?v=73l"></script>
+  <script src="js/survey-data.js?v=73l"></script>
+  <script src="js/ai-service.js?v=73l"></script>
+  <script src="js/app.js?v=73l"></script>
+  <!-- V7.2 3D 建模查看器（普通脚本；THREE 未加载时 window.Twin3D 不定义，孪生 3D 按钮保持置灰，不影响其他功能） -->
+  <script src="js/twin3d.js?v=73l"></script>
 </body>
 </html>

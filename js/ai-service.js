@@ -41,11 +41,17 @@
   }
 
   /* ---------- 调用 Kimi（经本地代理） ---------- */
+  /* V6.9：统一 localStorage 前缀 zxsj66_（旧键 aiChatHistory 一次性迁移） */
+  var HIST_KEY = 'zxsj66_aichat';
   function loadHistory() {
-    try { return JSON.parse(localStorage.getItem('aiChatHistory')) || []; } catch (e) { return []; }
+    try {
+      var raw = localStorage.getItem(HIST_KEY);
+      if (raw === null) { raw = localStorage.getItem('aiChatHistory'); if (raw !== null) localStorage.setItem(HIST_KEY, raw); }
+      return JSON.parse(raw) || [];
+    } catch (e) { return []; }
   }
   function saveHistory(h) {
-    try { localStorage.setItem('aiChatHistory', JSON.stringify(h.slice(-10))); } catch (e) {}
+    try { localStorage.setItem(HIST_KEY, JSON.stringify(h.slice(-10))); } catch (e) {}
   }
   function callAI(query) {
     return new Promise(function (resolve, reject) {

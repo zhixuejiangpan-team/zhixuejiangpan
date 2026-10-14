@@ -11,6 +11,8 @@
    ============================================================ */
 window.AMAP_KEY = '68c803d0b796714e0613f165678e3f08';
 window.AMAP_SECURITY_JS_CODE = '571063ca0b165cfa6b33557071197d98';
+/* V6.9 深色模式：高德自定义样式总开关（false 可全局禁用深色预检） */
+window.MAP_DARK_STYLE = true;
 
 window.AI_CONFIG = {
   API_KEY: '',  // Key 由服务端代理持有，前端无需填写
@@ -24,4 +26,15 @@ window.AI_CONFIG = {
 };
 
 window.TEAM_NAME = '智行江畔团队';
-window.SITE_VERSION = 'V6.6+AI';
+window.SITE_VERSION = 'V7.2-beta';
+/* V7.0 知识库演示种子开关：true 时首次访问自动注入 10 条演示知识+7 天演示统计，
+   成长卡片显示"演示数据"角标；false 时完全不注入，知识库从空白开始自然沉淀 */
+window.KB_DEMO_MODE = true;
+/* V7.2-beta 校区卡片小地图视野（开发时人工校准的固定值，禁止运行时动态计算）。
+   依据 js/data.js 实测坐标聚合：蛟桥北 n=25 / 蛟桥南 n=10 / 麦庐北 n=4 / 麦庐南 n=28 */
+window.TWIN_MINI_MAP = {
+  jq_north: { center: [115.85519, 28.74656], zoom: 16 },
+  jq_south: { center: [115.85472, 28.74051], zoom: 16 },
+  ml_north: { center: [115.81759, 28.73264], zoom: 16 },
+  ml_south: { center: [115.81637, 28.72777], zoom: 16 }
+};
