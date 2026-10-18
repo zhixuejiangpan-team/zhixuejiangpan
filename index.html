@@ -14,9 +14,9 @@
   <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
   <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
   <!-- V7.2 Three.js r147 UMD 本地内置（file:// 直开可用、零 CDN 依赖，仅 OrbitControls 一个附加控件） -->
-  <script src="js/vendor/three.min.js?v=73l"></script>
-  <script src="js/vendor/OrbitControls.js?v=73l"></script>
-  <link rel="stylesheet" href="css/style.css?v=73l">
+  <script src="js/vendor/three.min.js?v=73m"></script>
+  <script src="js/vendor/OrbitControls.js?v=73m"></script>
+  <link rel="stylesheet" href="css/style.css?v=73n">
 </head>
 <body>
 
@@ -83,11 +83,11 @@
           <div id="graphWrap" class="graph-wrap"></div>
         </div>
 
-        <!-- 需求调研验证（V7.2-beta：从"我的"页迁入搜索页底部，折叠态一行不占主流程） -->
-        <div class="card survey-panel reveal" id="surveyPanel">
+        <!-- 需求调研验证（V7.2-beta：迁入搜索页底部；默认展开，可折叠） -->
+        <div class="card survey-panel reveal open" id="surveyPanel">
           <div class="survey-header" id="surveyHeader">
             <span>📊 需求调研验证（N=29）</span>
-            <span class="survey-arrow" id="surveyArrow">▸</span>
+            <span class="survey-arrow" id="surveyArrow">▾</span>
           </div>
           <div class="survey-body" id="surveyBody"></div>
         </div>
@@ -176,6 +176,33 @@
           <div class="kb-chart" id="kbChart"></div>
           <p class="kb-note">统计自v7.0起 · 无时间戳的存量知识计入今日新增</p>
         </div>
+        <!-- V7.3 数据管理（默认收起）：真实数据导入 / 天气源 / 音效开关 -->
+        <div class="card block-card reveal data-panel" id="dataPanel">
+          <div class="data-header" id="dataHeader">
+            <h3>🗂 数据管理</h3>
+            <span class="data-arrow" id="dataArrow">▸</span>
+          </div>
+          <div class="data-body" id="dataBody" hidden>
+            <div class="data-row">
+              <b>真实人流数据</b>
+              <span class="data-status" id="realStatus">未导入（当前为模拟数据）</span>
+            </div>
+            <div class="data-row">
+              <input type="file" id="realFile" accept=".json,application/json" hidden>
+              <button class="btn btn-primary data-btn" id="realImport">导入真实数据（.json）</button>
+              <button class="btn btn-ghost data-btn" id="realClear" hidden>清除实测数据</button>
+            </div>
+            <p class="data-note">格式：[{spotId, date, timeSlot, count}]，导入后全站状态点切换为「实测」角标，无需刷新。</p>
+            <div class="data-row">
+              <b>天气源</b>
+              <span class="data-status" id="weatherStatus">未配置（默认晴天）</span>
+            </div>
+            <div class="data-row">
+              <b>微音效</b>
+              <label class="data-sound"><input type="checkbox" id="soundToggle"> 开启交互音效（默认静音）</label>
+            </div>
+          </div>
+        </div>
         <!-- 学习资源彩蛋（默认收起） -->
         <div class="card study-panel reveal" id="studyPanel">
           <div class="study-header" id="studyHeader">
@@ -200,13 +227,15 @@
     <p class="footer-sub">本应用数据基于学校历年公开文件整理（2009-2020），具体政策与营业时间以学校最新通知为准。</p>
   </footer>
 
-  <script src="js/config.js?v=73l"></script>
-  <script src="js/data.js?v=73l"></script>
-  <script src="js/guide-data.js?v=73l"></script>
-  <script src="js/survey-data.js?v=73l"></script>
-  <script src="js/ai-service.js?v=73l"></script>
-  <script src="js/app.js?v=73l"></script>
+  <script src="js/config.js?v=73n"></script>
+  <script src="js/data.js?v=73n"></script>
+  <script src="js/guide-data.js?v=73m"></script>
+  <script src="js/survey-data.js?v=73m"></script>
+  <!-- V7.3 数据源层：纯函数引擎 + 双源策略 + 文件热更新 + 天气（须在 app.js 之前加载） -->
+  <script src="js/data-source.js?v=73n"></script>
+  <script src="js/ai-service.js?v=73m"></script>
+  <script src="js/app.js?v=73n"></script>
   <!-- V7.2 3D 建模查看器（普通脚本；THREE 未加载时 window.Twin3D 不定义，孪生 3D 按钮保持置灰，不影响其他功能） -->
-  <script src="js/twin3d.js?v=73l"></script>
+  <script src="js/twin3d.js?v=73n"></script>
 </body>
 </html>

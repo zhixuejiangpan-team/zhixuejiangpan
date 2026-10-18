@@ -829,3 +829,107 @@ div[class*="amap-info-sharp"] { border-top-color: #1a1d24 !important; }
 }
 .twin-card.no-map .twin-card-hint { display: flex; }
 .twin-cardmap .amap-marker { cursor: pointer !important; }
+
+/* ================= V7.3 沉浸式体验升级 ================= */
+/* ---------- 模块一-1：时间轴控制器（z-index 210，属孪生层内部） ---------- */
+.twin-timeline {
+  position: relative; z-index: 210; height: 60px; flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px; padding: 0 24px;
+  background: var(--bg-secondary);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border-top: 0.5px solid var(--hairline);
+}
+.twin-tl-label { font-size: 12px; color: var(--text-secondary); font-weight: 600; white-space: nowrap; }
+.twin-tl-label.on { color: var(--accent); }
+.twin-timeline input[type="range"] {
+  flex: 1; -webkit-appearance: none; appearance: none; height: 4px;
+  background: var(--twin-grid); border-radius: 999px; outline: none; cursor: pointer;
+}
+.twin-timeline input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%;
+  background: var(--accent); border: 2px solid var(--bg-primary);
+  transition: transform .2s var(--ease-apple);
+}
+.twin-timeline input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.2); }
+.twin-timeline input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg-primary);
+}
+.twin-tl-time { font-size: 13px; color: var(--text-primary); font-variant-numeric: tabular-nums; min-width: 44px; text-align: center; }
+.twin-tl-now {
+  border: none; border-radius: 999px; background: var(--accent); color: #fff;
+  font-size: 12.5px; padding: 6px 16px; cursor: pointer; white-space: nowrap;
+}
+/* 预览标识（与预测分段控件互斥：预览时仅显示它） */
+.twin-preview-tag {
+  font-size: 11px; font-weight: 600; color: #fff; background: var(--accent);
+  border-radius: 999px; padding: 3px 12px; letter-spacing: .5px;
+}
+/* ---------- 模块一-2：日夜模式（夜晚 19-07 叠加深蓝滤镜） ---------- */
+.twin-night .twin-cardmap, .twin-night #twinSvg {
+  filter: brightness(.72) saturate(.85) hue-rotate(190deg);
+  transition: filter .6s var(--ease-apple);
+}
+.twin-cardmap, #twinSvg { transition: filter .6s var(--ease-apple); }
+/* ---------- 模块零-6：天气 chip + 雨滴层 ---------- */
+.twin-wx { font-size: 12.5px; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.twin-rain { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 3; }
+/* ---------- 模块四-3：时刻跳动 100ms 高亮闪烁（等宽数字已在 .twin-clock） ---------- */
+.twin-clock.tick { color: var(--accent); transition: color .1s var(--ease-apple); }
+/* ---------- 模块四-2：状态点悬浮 tooltip（玻璃拟态） ---------- */
+.twin-tip {
+  position: fixed; z-index: 260; pointer-events: none;
+  background: var(--bg-secondary);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border); border-radius: 10px;
+  color: var(--text-primary); font-size: 12px; padding: 7px 14px;
+  box-shadow: var(--shadow-card); white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+/* ---------- 模块四-1：四卡片 stagger 淡入（80ms 间隔 × 300ms） ---------- */
+.twin-stagger .twin-card { animation: twinCardIn .3s var(--ease-apple) backwards; }
+.twin-stagger .twin-card:nth-child(1) { animation-delay: 0ms; }
+.twin-stagger .twin-card:nth-child(2) { animation-delay: 80ms; }
+.twin-stagger .twin-card:nth-child(3) { animation-delay: 160ms; }
+.twin-stagger .twin-card:nth-child(4) { animation-delay: 240ms; }
+@keyframes twinCardIn { from { opacity: 0; transform: translateY(12px); } }
+/* ---------- 模块零-4/5：文档未读红点 + 实测角标 ---------- */
+.doc-dot {
+  display: inline-block; width: 8px; height: 8px; border-radius: 50%;
+  background: #E05260; margin-left: 6px; cursor: pointer; vertical-align: 2px;
+}
+.twin-real {
+  font-size: 10px; font-weight: 600; color: #fff; background: var(--twin-green);
+  border-radius: 999px; padding: 1px 8px; margin-left: 6px;
+}
+/* ---------- 模块零-5：数据管理面板 ---------- */
+.data-panel { overflow: hidden; }
+.data-header { display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; }
+.data-header h3 { margin-bottom: 0; }
+.data-arrow { color: var(--text-secondary); font-size: 15px; }
+.data-body { padding-top: 14px; border-top: 0.5px solid var(--hairline); margin-top: 12px; }
+.data-row { display: flex; align-items: center; gap: 12px; padding: 8px 0; font-size: 14px; flex-wrap: wrap; }
+.data-row b { color: var(--text-primary); font-weight: 600; min-width: 96px; }
+.data-status { font-size: 13px; color: var(--text-secondary); }
+.data-note { font-size: 12px; color: var(--text-secondary); margin: 4px 0 8px; }
+.data-btn { padding: 8px 20px; font-size: 13.5px; }
+.data-sound { display: flex; align-items: center; gap: 6px; font-size: 13.5px; color: var(--text-primary); cursor: pointer; }
+/* ---------- 模块二-3：3D 剖面楼层面板（玻璃拟态，查看器右侧） ---------- */
+.v3d-floors {
+  position: absolute; right: 18px; top: 76px; z-index: 2; width: 200px;
+  background: var(--bg-secondary);
+  -webkit-backdrop-filter: blur(20px); backdrop-filter: blur(20px);
+  border: 1px solid var(--glass-border); border-radius: var(--radius-md);
+  padding: 12px 16px; animation: fadeUp .3s var(--ease-apple);
+}
+.v3d-floors b { font-size: 13px; color: var(--text-primary); display: block; margin-bottom: 6px; }
+.v3d-floors ul { list-style: none; }
+.v3d-floors li { font-size: 12.5px; color: var(--text-secondary); padding: 4px 0; border-bottom: 0.5px solid var(--hairline); }
+.v3d-floors li:last-child { border-bottom: none; }
+.v3d-floors-empty { font-size: 12.5px; color: var(--text-secondary); }
+/* ---------- 移动端适配 ---------- */
+@media (max-width: 768px) {
+  .twin-timeline { padding: 0 12px; gap: 8px; height: 52px; }
+  .twin-tl-label { font-size: 11px; }
+  .twin-tl-now { padding: 5px 12px; font-size: 12px; }
+  .v3d-floors { right: 10px; top: 64px; width: 160px; }
+  .data-row b { min-width: 0; width: 100%; }
+}

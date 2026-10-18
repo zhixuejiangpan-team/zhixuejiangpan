@@ -26,7 +26,11 @@ window.AI_CONFIG = {
 };
 
 window.TEAM_NAME = '智行江畔团队';
-window.SITE_VERSION = 'V7.2-beta';
+window.SITE_VERSION = 'V7.3';
+/* V7.3 天气数据源（模块零-6）：和风/高德 Web 服务 Key —— 与 index.html 的 JS API Key
+   不同，需单独申请。留空时全站优雅降级为晴天，不发任何网络请求。
+   PROVIDER: 'amap'（高德 Web 服务，city=360100 南昌）或 'qweather'（和风天气） */
+window.WEATHER_CONFIG = { PROVIDER: 'amap', KEY: '', CITY: '360100' };
 /* V7.0 知识库演示种子开关：true 时首次访问自动注入 10 条演示知识+7 天演示统计，
    成长卡片显示"演示数据"角标；false 时完全不注入，知识库从空白开始自然沉淀 */
 window.KB_DEMO_MODE = true;

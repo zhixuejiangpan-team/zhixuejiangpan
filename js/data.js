@@ -285,3 +285,37 @@ window.studyResources = [
 ];
 
 /* ---------- 高频问题增补：无（已合并到上面数组中） ---------- */
+
+/* ---------- V7.3 学校正式文件热更新（模块零-4） ----------
+   docUrl：学校正式文件链接（https）；docUpdateTime：ISO 日期。
+   docUpdateTime 晚于 localStorage 'zxsj66_doc_seen_<id>' 时，点位名称旁显示未读红点。
+   运行时更新走 ZXSJ.updateSchoolDocs(spotId, url, isoTime)（含 https/ISO 校验）。 */
+window.SPOT_DOCS = {
+  'jq_xyy':  { docUrl: 'https://www.jxufe.edu.cn/', docUpdateTime: '2026-10-10' },   /* 住院报销材料通知 */
+  'jq_dshd': { docUrl: 'https://www.jxufe.edu.cn/', docUpdateTime: '2026-10-12' },   /* 学生证补办受理通知 */
+  'jq_nqbg': { docUrl: 'https://www.jxufe.edu.cn/', docUpdateTime: '2026-09-28' },   /* 教务处考试安排通知 */
+  'jq_tw':   { docUrl: 'https://www.jxufe.edu.cn/', docUpdateTime: '2026-10-08' },   /* 图文楼开放时间调整 */
+  'ml_dshd': { docUrl: 'https://www.jxufe.edu.cn/', docUpdateTime: '2026-10-09' }    /* 麦庐医保材料受理安排 */
+};
+
+/* ---------- V7.3 楼层信息（模块二-3 剖面查看器数据源，无数据的点位显示"楼层信息待补充"） ---------- */
+window.SPOT_FLOORS = {
+  'jq_tw':  ['1F 总服务台 / 自助打印区', '2F 社科借阅区', '3F 自科借阅区', '4F 自习区（考试周加开）'],
+  'jq_xyy': ['1F 门诊 / 医保办', '2F 检验科 / 观察室', '3F 健康管理中心'],
+  'ml_yst': ['1F 大众餐窗口', '2F 风味窗口 / 清真窗口'],
+  'ml_est': ['1F 大众餐 / 面点', '2F 特色档口'],
+  'ml_bqst':['1F 大众餐', '2F 清真窗口 / 教工餐'],
+  'jq_nqst':['1F 早餐（全校区最丰富）', '2F 午晚餐窗口'],
+  'jq_bqst':['1F 午市窗口', '2F 风味餐厅'],
+  'ml_tyg': ['1F 篮球馆 / 羽毛球馆', '2F 健身房 / 舞蹈房']
+};
+
+/* 注入到点位对象（spot.docUrl / docUpdateTime / floors 可被任意模块直接读取） */
+(function () {
+  spots.forEach(function (s) {
+    var d = window.SPOT_DOCS[s.id];
+    if (d) { s.docUrl = d.docUrl; s.docUpdateTime = d.docUpdateTime; }
+    var f = window.SPOT_FLOORS[s.id];
+    if (f) s.floors = f;
+  });
+})();

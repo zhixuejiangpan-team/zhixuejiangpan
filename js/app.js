@@ -121,6 +121,7 @@
   function runSearch(q) {
     q = (q || '').trim();
     if (!q) return;
+    if (q === '蛟湖') { pushHist(q); return; } /* 彩蛋词完全拦截：不写历史、不执行搜索，直接弹彩蛋 */
     pushHist(q);
     var list = matchQuestions(q);
     renderResults(list, q);
@@ -538,16 +539,26 @@
     function buildDrawer() {
       var list = document.getElementById('drawerList');
       var groups = ['蛟桥园', '麦庐园', '枫林园'];
+      var DS = window.ZXSJ && window.ZXSJ.DataSource;
       list.innerHTML = groups.map(function (c) {
         return '<div class="drawer-group"><h5>' + c + '</h5>' +
           spots.filter(function (s) { return s.campus === c; }).map(function (s) {
+            /* V7.3 学校文件热更新：未读文件点位名称旁红点 */
+            var dot = (DS && DS.hasUnreadDoc(s.id)) ? '<i class="doc-dot" data-doc="' + s.id + '" title="该点位有更新的学校文件"></i>' : '';
             return '<div class="drawer-item" data-loc="' + s.id + '">' +
               '<span class="dot" style="background:' + (TYPE_COLOR[s.type] || '#666') + '"></span>' +
-              esc(s.name) + '<span class="drawer-votes">👍' + getVotes(s.id) + '</span></div>';
+              esc(s.name) + dot + '<span class="drawer-votes">👍' + getVotes(s.id) + '</span></div>';
           }).join('') + '</div>';
       }).join('');
     }
     document.getElementById('drawerList').addEventListener('click', function (e) {
+      /* V7.3 文档红点：点击打开学校文件并标记已读 */
+      var dd = e.target.closest('.doc-dot');
+      if (dd && window.ZXSJ) {
+        var f = window.ZXSJ.DataSource.getSpotFile(dd.getAttribute('data-doc'));
+        if (f) { window.open(f.pdfUrl, '_blank', 'noopener'); window.ZXSJ.DataSource.markDocSeen(dd.getAttribute('data-doc')); dd.remove(); }
+        return;
+      }
       var it = e.target.closest('.drawer-item');
       if (it) locate(it.getAttribute('data-loc'));
     });
@@ -1309,6 +1320,8 @@
       document.getElementById('surveyArrow').textContent = open ? '▾' : '▸';
       if (open) setTimeout(renderCharts, 60);
     });
+    /* 默认展开态（HTML 带 open 类）：首帧即渲染图表，无需先折叠再展开 */
+    if (panel.classList.contains('open')) setTimeout(renderCharts, 80);
     document.getElementById('soHeader').addEventListener('click', function () {
       var bodyEl = document.getElementById('soBody');
       bodyEl.hidden = !bodyEl.hidden;
@@ -1429,66 +1442,18 @@
     var REDUCED = false;
     try { REDUCED = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
     var LEVEL_TXT = { green: '畅通', yellow: '较拥挤', red: '拥挤' };
-    function gauss(t, mu, sig) { var d = (t - mu) / sig; return Math.exp(-d * d / 2); }
-    function isExamWeek(date) {
-      try {
-        var nodes = (window.calendarData && window.calendarData.nodes) || [];
-        var now = date.getTime();
-        for (var i = 0; i < nodes.length; i++) {
-          if (!/考试|院考|校考/.test(nodes[i].title)) continue;
-          var t0 = new Date(nodes[i].date).getTime();
-          if (Math.abs(now - t0) < 14 * 86400000) return true;
-        }
-      } catch (e) {}
-      return false;
-    }
-    function kindOf(sp) {
-      var t = sp.type || '', n = sp.name || '', tags = (sp.tags || []).join('');
-      if (t === '食堂') return 'canteen';
-      if (/图书馆|图文/.test(n)) return 'library';
-      if (/快递/.test(n + tags)) return 'express';
-      if (t === '医疗') return 'clinic';
-      return 'gym';
-    }
+    /* V7.3 模块零：状态引擎迁至 js/data-source.js（纯函数 calculateCrowd，禁读系统时间）。
+       此处保留同签名薄封装：statusOf 走双源（实测优先），predictOf 走纯模拟（预测恒为模拟值）。 */
     function statusOf(sp, date, t) {
-      var day = date.getDay(), weekend = (day === 0 || day === 6), kind = kindOf(sp);
-      var p = 0.2, cap = 100;
-      if (kind === 'canteen') {
-        cap = 150 + ((sp.tags && sp.tags.length) || 2) * 30;
-        p = 0.55 * gauss(t, 7.5, 1) + 1 * gauss(t, 12, 1.1) + 0.8 * gauss(t, 17.5, 1.1);
-        if (t < 6 || t > 21) p = 0.02;
-      } else if (kind === 'library') {
-        cap = 800;
-        p = (t < 8 || t > 22.5) ? 0.02 : (0.35 + 0.5 * gauss(t, 19, 3));
-        if (isExamWeek(date)) p = Math.min(1, p * 1.4);   /* 考试周加成 40% */
-        if (t >= 22.5) p = 0;                              /* 22:30 闭馆归零 */
-      } else if (kind === 'express') {
-        cap = 300;
-        p = 0.9 * gauss(t, 17, 1.6);
-        if (weekend) p = Math.min(1, p * 1.25);
-        if (t < 9 || t > 20) p = 0.03;
-      } else if (kind === 'clinic') {
-        cap = 80;
-        p = 0.5 * gauss(t, 10, 2) + 0.6 * gauss(t, 15.5, 2);
-        if (t < 8 || t > 17.5) p = 0.03;
-      } else {
-        cap = 200;
-        p = (t < 7 || t > 21) ? 0.05 : (0.3 + 0.45 * gauss(t, 18, 2.5));
-      }
-      p = Math.max(0.02, Math.min(1, p));
-      return { p: p, n: Math.round(p * cap), cap: cap, level: p <= 0.6 ? 'green' : (p <= 0.85 ? 'yellow' : 'red'), kind: kind };
+      var r = window.ZXSJ.DataSource.getCrowd(sp.id, Math.round(t * 60), date);
+      return { p: r.level / 100, n: r.n, cap: r.cap, level: r.color, kind: r.kind, source: r.source };
     }
-    /* V7.0 闭馆判定（与 statusOf 的小时规则一致，用于预测强制归零） */
-    function isClosed(kind, t) {
-      if (kind === 'canteen') return t < 6 || t > 21;
-      if (kind === 'library') return t >= 22.5;
-      if (kind === 'express') return t < 9 || t > 20;
-      if (kind === 'clinic') return t < 8 || t > 17.5;
-      return t < 7 || t > 21;
-    }
+    function isClosed(kind, t) { return window.ZXSJ.isClosed(kind, t); }
     /* V7.0 差分预测：预测值 = 当前值 + (当前值 - N分钟前值)，闭馆后强制为 0（V7.1 支持 30/60 两档） */
     function predictOf(sp, date, t, aheadH) {
-      var cur = statusOf(sp, date, t), prev = statusOf(sp, date, t - aheadH), kind = cur.kind;
+      var cur = window.ZXSJ.calculateCrowd(sp, Math.round(t * 60), date);
+      var prev = window.ZXSJ.calculateCrowd(sp, Math.round((t - aheadH) * 60), date);
+      var kind = cur.kind;
       if (isClosed(kind, t) || isClosed(kind, t + aheadH)) return { p: 0, n: 0, cap: cur.cap, level: 'green', kind: kind, closed: true };
       var p = Math.max(0, Math.min(1, cur.p + (cur.p - prev.p)));
       return { p: p, n: Math.round(p * cur.cap), cap: cur.cap, level: p <= 0.6 ? 'green' : (p <= 0.85 ? 'yellow' : 'red'), kind: kind, closed: false };
@@ -1497,7 +1462,14 @@
     function adviceOf(p) { return (p <= 0.6 ? '现在去' : (p <= 0.85 ? '建议错峰' : '别去')) + '（模拟预测）'; }
     function levelColor(level) { return cssVar('--twin-' + level) || (level === 'green' ? '#2E7D32' : level === 'yellow' ? '#C9A227' : '#D32F2F'); }
     function fmtTime(min) { var h = Math.floor(min / 60) % 24, m = Math.floor(min % 60); return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m; }
-    function nowVirtual() { return demo ? virtualT : (new Date().getHours() * 60 + new Date().getMinutes()); }
+    /* V7.3 时间轴：previewMin 非空时全站状态按预览时刻计算（模拟），与演示模式/实时互斥 */
+    var previewMin = null;
+    function nowVirtual() {
+      if (previewMin !== null) return previewMin;
+      return demo ? virtualT : (new Date().getHours() * 60 + new Date().getMinutes());
+    }
+    /* V7.3 日夜判定：07:00-19:00 为白天（按时间轴所选时刻，非仅系统时间） */
+    function isNightMin(mins) { return mins < 7 * 60 || mins >= 19 * 60; }
 
     function buildDom() {
       overlay = document.createElement('div');
@@ -1508,10 +1480,12 @@
         '<div class="twin-content">' +
         '<div class="twin-topbar"><span class="twin-title">数字孪生</span>' +
         '<span class="twin-clock" id="twinClock">--:--</span>' +
+        '<span class="twin-wx" id="twinWx" title="天气数据源：高德/和风 Web 服务（Key 需单独申请）"></span>' +
         '<div class="twin-seg" id="twinSeg"><span class="twin-seg-ind" id="twinSegInd"></span>' +
         '<button type="button" data-tier="0" class="on">现在</button>' +
         '<button type="button" data-tier="30">+30</button>' +
         '<button type="button" data-tier="60">+60</button></div>' +
+        '<span class="twin-preview-tag" id="twinPreviewTag" hidden>预览中</span>' +
         '<label class="twin-demo"><input type="checkbox" id="twinDemo"> 演示模式 600×</label>' +
         '<button class="twin-close" id="twinClose">✕ 返回地图</button></div>' +
         '<div class="twin-main"><div class="twin-list" id="twinList"></div>' +
@@ -1522,7 +1496,13 @@
         '<div class="twin-card" data-q="蛟桥南"><span class="twin-card-title">蛟桥南</span><span class="twin-card-hint">地图待加载 · 滚入视口后显示</span><div class="twin-cardmap"></div></div>' +
         '<div class="twin-card" data-q="麦庐南"><span class="twin-card-title">麦庐南</span><span class="twin-card-hint">地图待加载 · 滚入视口后显示</span><div class="twin-cardmap"></div></div>' +
         '</div>' +
-        '<svg id="twinSvg" viewBox="0 0 760 560" preserveAspectRatio="xMidYMid meet"></svg></div></div></div>';
+        '<svg id="twinSvg" viewBox="0 0 760 560" preserveAspectRatio="xMidYMid meet"></svg></div></div>' +
+        /* V7.3 时间轴控制器（z-index 210，属孪生层内部；预览时隐藏预测分段控件，互斥防嵌套） */
+        '<div class="twin-timeline" id="twinTimeline">' +
+        '<span class="twin-tl-label" id="twinTlLabel">实时</span>' +
+        '<input type="range" id="twinTl" min="360" max="1380" step="10" aria-label="时间轴 06:00-23:00">' +
+        '<span class="twin-tl-time" id="twinTlTime">--:--</span>' +
+        '<button class="twin-tl-now" id="twinTlNow" hidden>回到现在</button></div></div>';
       document.body.appendChild(overlay);
       listEl = document.getElementById('twinList');
       svg = document.getElementById('twinSvg');
@@ -1531,11 +1511,61 @@
       demoCb = document.getElementById('twinDemo');
       segEl = document.getElementById('twinSeg');
       segInd = document.getElementById('twinSegInd');
+      wxEl = document.getElementById('twinWx');
       demoCb.checked = lsGet('zxsj66_twin_demo', false);
       demo = demoCb.checked;
       demoCb.addEventListener('change', function () {
         demo = demoCb.checked;
         lsSet('zxsj66_twin_demo', demo);
+        tick(true);
+      });
+      /* ================= V7.3 时间轴控制器（模块一-1） =================
+         拖拽=预览模式（状态按所选时刻模拟值刷新，节流 100ms）；
+         松手：与当前时刻差 >30 分钟保持预览并显示「回到现在」，<30 分钟自动回弹；
+         预览激活时隐藏 +30/+60 预测分段控件（防时间轴与预测嵌套）。 */
+      var tl = document.getElementById('twinTl');
+      var tlTime = document.getElementById('twinTlTime');
+      var tlLabel = document.getElementById('twinTlLabel');
+      var tlNow = document.getElementById('twinTlNow');
+      var previewTag = document.getElementById('twinPreviewTag');
+      var tlThrottle = 0;
+      function realNowMin() { var d = new Date(); return d.getHours() * 60 + d.getMinutes(); }
+      function syncPreviewUI() {
+        var on = previewMin !== null;
+        segEl.style.display = on ? 'none' : '';          /* 预览模式隐藏预测层，互斥 */
+        previewTag.hidden = !on;
+        tlNow.hidden = !on;
+        tlLabel.textContent = on ? '预览' : '实时';
+        tlLabel.classList.toggle('on', on);
+        overlay.classList.toggle('twin-preview', on);
+      }
+      tl.value = Math.max(360, Math.min(1380, realNowMin()));
+      tl.addEventListener('input', function () {
+        var v = +tl.value;
+        tlTime.textContent = fmtTime(v);
+        /* 状态刷新节流 100ms，不每帧重算 */
+        var now = Date.now();
+        if (now - tlThrottle < 100) return;
+        tlThrottle = now;
+        previewMin = v;
+        syncPreviewUI();
+        tick(true);
+      });
+      tl.addEventListener('change', function () {
+        var v = +tl.value;
+        if (Math.abs(v - realNowMin()) <= 30) {           /* 差 ≤30 分钟：自动回弹实时 */
+          previewMin = null;
+          tl.value = Math.max(360, Math.min(1380, realNowMin()));
+        } else {
+          previewMin = v;                                  /* 保持预览，显示「回到现在」 */
+        }
+        syncPreviewUI();
+        tick(true);
+      });
+      tlNow.addEventListener('click', function () {
+        previewMin = null;
+        tl.value = Math.max(360, Math.min(1380, realNowMin()));
+        syncPreviewUI();
         tick(true);
       });
       document.getElementById('twinClose').addEventListener('click', close);
@@ -1547,6 +1577,32 @@
         for (var i = 0; i < rows.length; i++) {
           if (rows[i].sp.id === sid) { open3DForRow(rows[i], t); return; }
         }
+      });
+      /* V7.3 悬浮 tooltip：SVG 圆点/标签与小地图 Marker 共用（桌面 hover 生效） */
+      svg.addEventListener('mouseover', function (e) {
+        var t = e.target.closest('.twin-dot, .twin-label, .twin-halo');
+        if (!t) return;
+        var sid = t.getAttribute('data-sid');
+        for (var i = 0; i < rows.length; i++) if (rows[i].sp.id === sid) { showTip(rows[i], e.clientX, e.clientY); return; }
+      });
+      svg.addEventListener('mousemove', function (e) { moveTip(e.clientX, e.clientY); });
+      svg.addEventListener('mouseout', function (e) {
+        if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.twin-dot, .twin-label, .twin-halo')) hideTip();
+      });
+      cardsEl.addEventListener('mouseover', function (e) {
+        var t = e.target.closest && e.target.closest('.tmini');
+        if (!t) return;
+        for (var i = 0; i < miniRegistry.length; i++) {
+          var cs = miniRegistry[i];
+          if (cs.dead) continue;
+          for (var j = 0; j < cs.refs.length; j++) {
+            if (cs.refs[j].dotEl.parentNode === t) { showTip(cs.refs[j].row, e.clientX, e.clientY); return; }
+          }
+        }
+      });
+      cardsEl.addEventListener('mousemove', function (e) { moveTip(e.clientX, e.clientY); });
+      cardsEl.addEventListener('mouseout', function (e) {
+        if (!e.relatedTarget || !e.relatedTarget.closest || !e.relatedTarget.closest('.tmini')) hideTip();
       });
       /* V7.1 iOS 分段控件：现在 / +30 / +60，切换时整视图 300ms 交叉淡化 */
       segEl.addEventListener('click', function (e) {
@@ -1567,6 +1623,14 @@
       });
       /* 问AI：经统一 AI 通道（含知识库沉淀），不绕过 */
       listEl.addEventListener('click', function (e) {
+        /* V7.3 文档红点：点击打开学校文件并标记已读（红点消失，写入 localStorage） */
+        var dd = e.target.closest('.doc-dot');
+        if (dd) {
+          var DS = window.ZXSJ && window.ZXSJ.DataSource;
+          var f = DS && DS.getSpotFile(dd.getAttribute('data-doc'));
+          if (f) { window.open(f.pdfUrl, '_blank', 'noopener'); DS.markDocSeen(dd.getAttribute('data-doc')); dd.remove(); }
+          return;
+        }
         /* V7.2 3D 查看器入口（V7.2-beta：与圆点点击共用 open3DForRow） */
         var b3 = e.target.closest('.twin-3d');
         if (b3) {
@@ -1599,9 +1663,14 @@
     }
     var CELLS = { '蛟桥北': [20, 20], '蛟桥南': [20, 290], '麦庐北': [390, 20], '麦庐南': [390, 290] };
     function buildList(spots) {
+      var DS = window.ZXSJ && window.ZXSJ.DataSource;
       listEl.innerHTML = spots.map(function (sp, i) {
+        /* V7.3 学校文件热更新：有未读文件的点位名称旁显示红点；实测数据源显示「实测」角标 */
+        var docDot = (DS && DS.hasUnreadDoc(sp.id)) ? '<i class="doc-dot" data-doc="' + sp.id + '" title="该点位有更新的学校文件"></i>' : '';
         return '<div class="twin-row" data-i="' + i + '">' +
-          '<div class="twin-row-head"><b>' + esc(sp.name) + '</b><span class="twin-kind">' + esc(sp.type || '') + '</span></div>' +
+          '<div class="twin-row-head"><b>' + esc(sp.name) + '</b>' + docDot +
+          '<span class="twin-real" id="twinReal' + i + '" hidden>实测</span>' +
+          '<span class="twin-kind">' + esc(sp.type || '') + '</span></div>' +
           '<div class="twin-nums"><span class="twin-n" id="twinN' + i + '">--</span>' +
           '<div class="twin-bar"><i id="twinBar' + i + '"></i></div></div>' +
           '<div class="twin-advice" id="twinAdv' + i + '" hidden></div>' +
@@ -1609,7 +1678,7 @@
           '<button class="twin-3d off" data-i="' + i + '" title="当前设备不支持 3D 查看">3D</button></div></div>';
       }).join('');
       rows = spots.map(function (sp, i) {
-        return { sp: sp, nEl: document.getElementById('twinN' + i), barEl: document.getElementById('twinBar' + i), advEl: document.getElementById('twinAdv' + i), btn3d: document.getElementById('twin3d' + i), dotEl: null, last: { n: 0, p: 0, level: 'green' } };
+        return { sp: sp, nEl: document.getElementById('twinN' + i), barEl: document.getElementById('twinBar' + i), advEl: document.getElementById('twinAdv' + i), realEl: document.getElementById('twinReal' + i), btn3d: document.getElementById('twin3d' + i), dotEl: null, last: { n: 0, p: 0, level: 'green' } };
       });
       rows.forEach(function (r, i) { r.btn3d = listEl.querySelector('.twin-3d[data-i="' + i + '"]'); });
       apply3dAvail();
@@ -1667,22 +1736,97 @@
         r.haloEl = svg.querySelector('.twin-halo[data-sid="' + r.sp.id + '"]');
       });
     }
+    /* V7.3 雨天：仅可视校区卡片叠加 Canvas 雨滴层（每卡 <50 粒子，单一 RAF 驱动，IO 控制启停） */
+    var rainRAF = null, rainLayers = [];
+    function syncRain() {
+      var w = window.ZXSJ && ZXSJ.DataSource.getWeather();
+      var rainy = !!(w && (w.condition === 'rain' || w.condition === 'snow'));
+      if (!rainy || !cardsEl || cardsEl.hidden) { stopRain(); return; }
+      Array.prototype.forEach.call(cardsEl.children, function (card) {
+        if (card._inView === false) return;               /* 仅可视卡片 */
+        if (card.querySelector('.twin-rain')) return;
+        var cv = document.createElement('canvas');
+        cv.className = 'twin-rain';
+        card.appendChild(cv);
+        var drops = [];
+        for (var i = 0; i < 40; i++) drops.push({ x: Math.random(), y: Math.random(), v: 0.008 + Math.random() * 0.01 });
+        rainLayers.push({ cv: cv, ctx: cv.getContext('2d'), drops: drops, card: card });
+      });
+      rainLayers = rainLayers.filter(function (L) {
+        if (!L.cv.parentNode || L.card._inView === false) { L.cv.remove(); return false; }
+        return true;
+      });
+      if (rainLayers.length && !rainRAF && !REDUCED) rainLoop();
+    }
+    function rainLoop() {
+      rainRAF = requestAnimationFrame(rainLoop);
+      if (overlay.hidden) return;
+      rainLayers.forEach(function (L) {
+        var cv = L.cv, w = cv.clientWidth, h = cv.clientHeight;
+        if (!w || !h) return;
+        if (cv.width !== w) { cv.width = w; cv.height = h; }
+        var ctx = L.ctx;
+        ctx.clearRect(0, 0, w, h);
+        ctx.strokeStyle = 'rgba(140,180,255,0.35)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        L.drops.forEach(function (d) {
+          d.y += d.v; if (d.y > 1) { d.y = -0.05; d.x = Math.random(); }
+          var x = d.x * w, y = d.y * h;
+          ctx.moveTo(x, y); ctx.lineTo(x - 3, y + 10);
+        });
+        ctx.stroke();
+      });
+    }
+    function stopRain() {
+      if (rainRAF) { cancelAnimationFrame(rainRAF); rainRAF = null; }
+      rainLayers.forEach(function (L) { L.cv.remove(); });
+      rainLayers = [];
+    }
+    var wxEl = null, lastClockTxt = '', clockFlashT = null;
     function tick(force) {
       if (!openFlag) return;
       var date = new Date();
-      if (demo) { virtualT = (virtualT + 10) % (24 * 60); }  /* 600×：1 秒 = 10 分钟 */
-      var t = nowVirtual() / 60, timeTxt = fmtTime(nowVirtual());
-      clockEl.textContent = demo ? '模拟时刻 ' + timeTxt + ' · 600×' : ('实时 ' + timeTxt);
-      clockEl.classList.toggle('demo', demo);
+      if (demo && previewMin === null) { virtualT = (virtualT + 10) % (24 * 60); }  /* 600×：1 秒 = 10 分钟；预览时暂停推进 */
+      var mins = nowVirtual();
+      var t = mins / 60, timeTxt = fmtTime(mins);
+      var preview = previewMin !== null;
+      /* V7.3 模块四-3：时刻等宽数字 + 跳动时 100ms 高亮闪烁 */
+      var clockTxt = preview ? '预览 ' + timeTxt + '（模拟）' : (demo ? '模拟时刻 ' + timeTxt + ' · 600×' : ('实时 ' + timeTxt));
+      if (clockTxt !== lastClockTxt) {
+        lastClockTxt = clockTxt;
+        clockEl.textContent = clockTxt;
+        clockEl.classList.remove('tick'); void clockEl.offsetWidth; clockEl.classList.add('tick');
+        clearTimeout(clockFlashT);
+        clockFlashT = setTimeout(function () { clockEl.classList.remove('tick'); }, 120);
+      }
+      clockEl.classList.toggle('demo', demo || preview);
+      /* V7.3 时间轴：实时模式下时间显示跟随当前时刻 */
+      if (!preview) {
+        var tlEl = document.getElementById('twinTlTime');
+        if (tlEl) tlEl.textContent = timeTxt;
+      }
+      /* V7.3 日夜模式：按时间轴所选时刻判定（19-07 为夜） */
+      window.__twinNight = isNightMin(mins);
+      overlay.classList.toggle('twin-night', window.__twinNight);
+      /* V7.3 天气 chip + 雨天文案提示 */
+      if (wxEl) {
+        var wx = window.ZXSJ.DataSource.getWeather();
+        var ico = wx.condition === 'rain' ? '🌧' : (wx.condition === 'snow' ? '❄' : '☀');
+        wxEl.textContent = ico + ' ' + wx.temp + '°' + (wx.condition === 'rain' ? ' 雨天，人流可能减少 20%' : (wx.condition === 'snow' ? ' 雪天出行注意防滑' : ''));
+      }
+      var effTier = preview ? 0 : tier;      /* 预览模式与预测层互斥（分段控件已隐藏，双保险） */
       rows.forEach(function (r) {
         var st = statusOf(r.sp, date, t);
         r.last = st;
+        /* V7.3 实测角标：数据源为 real 时显示 */
+        if (r.realEl) r.realEl.hidden = st.source !== 'real';
         /* V7.2 正式版：状态同步事件接口（3D 查看器等消费方监听 twin:status-update） */
         try { window.dispatchEvent(new CustomEvent('twin:status-update', { detail: { id: r.sp.id, crowdLevel: st.level, color: levelColor(st.level) } })); } catch (e) {}
-        var prefix = demo ? '（模拟时刻 ' + timeTxt + '）' : '';
-        if (tier > 0) {
+        var prefix = demo ? '（模拟时刻 ' + timeTxt + '）' : (preview ? '（预览时刻 ' + timeTxt + '）' : '');
+        if (effTier > 0) {
           /* V7.1 预测态：按所选档位（+30/+60）差分推断；圆点半透明区分 */
-          var pd = predictOf(r.sp, date, t, tier / 60);
+          var pd = predictOf(r.sp, date, t, effTier / 60);
           var curPct = Math.round(st.p * 100), predPct = Math.round(pd.p * 100);
           r.nEl.textContent = prefix + ' ' + st.n + ' 人 · ' + curPct + '% → 预计 ' + predPct + '%';
           r.nEl.style.color = levelColor(pd.level);
@@ -1706,6 +1850,7 @@
         }
       });
       updateMiniDots();   /* V7.2-beta：小地图圆点颜色零重建同步 */
+      syncRain();         /* V7.3：雨天可视卡片雨滴层（IO 控制，<50 粒子/卡） */
     }
     function startTimer() { stopTimer(); timer = setInterval(tick, demo ? 1000 : 30000); }
     function stopTimer() { if (timer) { clearInterval(timer); timer = null; } }
@@ -1723,6 +1868,7 @@
         if (window.__toast) window.__toast('当前设备不支持 3D 查看');
         return;
       }
+      if (window.__sfx) window.__sfx.play('open3d');   /* V7.3 微音效：110Hz 渐强 */
       window.Twin3D.open({
         name: r.sp.name, type: r.sp.type || '', kind: kind, id: r.sp.id,
         getState: function () { return r.last; },         /* 复用状态引擎引用，实时同步，不新增定时器 */
@@ -1742,6 +1888,34 @@
       setTimeout(function () { tip.classList.add('fade'); }, 1200);
       setTimeout(function () { tip.remove(); }, 1550);
     }
+    /* V7.3 模块四-2：状态点悬浮提示（玻璃拟态 tooltip：当前拥挤度 · 预计 30 分钟后） */
+    var tipEl = null, tipRow = null;
+    var HOVERABLE = false;
+    try { HOVERABLE = window.matchMedia && window.matchMedia('(hover: hover)').matches; } catch (e) {}
+    function ensureTip() {
+      if (tipEl) return tipEl;
+      tipEl = document.createElement('div');
+      tipEl.className = 'twin-tip';
+      tipEl.hidden = true;
+      document.body.appendChild(tipEl);
+      return tipEl;
+    }
+    function showTip(row, x, y) {
+      if (!HOVERABLE || !row || !openFlag) return;
+      tipRow = row;
+      var tip = ensureTip();
+      var pd = predictOf(row.sp, new Date(), nowVirtual() / 60, 0.5);
+      tip.textContent = row.sp.name + ' · 当前 ' + Math.round(row.last.p * 100) + '% · 预计 30 分钟后 ' + Math.round(pd.p * 100) + '%';
+      tip.hidden = false;
+      tip.style.left = Math.min(x + 14, innerWidth - 220) + 'px';
+      tip.style.top = Math.max(8, y - 42) + 'px';
+    }
+    function moveTip(x, y) {
+      if (!tipEl || tipEl.hidden) return;
+      tipEl.style.left = Math.min(x + 14, innerWidth - 220) + 'px';
+      tipEl.style.top = Math.max(8, y - 42) + 'px';
+    }
+    function hideTip() { if (tipEl) tipEl.hidden = true; tipRow = null; }
     function canUseMiniMaps() {
       if (typeof AMap === 'undefined') { console.warn('[twin-mini] AMap 未加载，校区卡片降级为 Canvas 圆点模式'); return false; }
       try {
@@ -1884,9 +2058,15 @@
       document.body.classList.add('twin-open');   /* V7.2-beta 隐藏高德原生控件 */
       overlay.hidden = false;
       openFlag = true;
+      /* V7.3 天气：进入孪生时后台刷新（30 分钟缓存，未配置 Key 时零请求） */
+      if (window.ZXSJ && ZXSJ.DataSource.refreshWeather) ZXSJ.DataSource.refreshWeather().then(function () { if (openFlag) tick(true); });
       /* V7.2-beta：校区卡片优先内嵌高德小地图；不支持则降级 Canvas 圆点（SVG） */
       if (canUseMiniMaps()) {
         setupCards();
+        /* V7.3 模块四-1：四张校区卡片 stagger 淡入（80ms 间隔 × 300ms，每次进入播一次） */
+        cardsEl.classList.remove('twin-stagger');
+        void cardsEl.getBoundingClientRect();
+        cardsEl.classList.add('twin-stagger');
       } else {
         if (cardsEl) cardsEl.hidden = true;
         svg.hidden = false;
@@ -1902,8 +2082,19 @@
     function close() {
       openFlag = false;
       stopTimer();
+      stopRain();                                /* V7.3：关闭孪生停止雨滴 RAF */
+      hideTip();
+      previewMin = null;                         /* V7.3：退出预览，恢复实时 */
+      if (segEl) segEl.style.display = '';
+      var pt = document.getElementById('twinPreviewTag'); if (pt) pt.hidden = true;
+      var tn = document.getElementById('twinTlNow'); if (tn) tn.hidden = true;
+      var tl = document.getElementById('twinTl');
+      if (tl) { var d0 = new Date(); tl.value = Math.max(360, Math.min(1380, d0.getHours() * 60 + d0.getMinutes())); }
+      var tlLab = document.getElementById('twinTlLabel'); if (tlLab) { tlLab.textContent = '实时'; tlLab.classList.remove('on'); }
+      if (overlay) overlay.classList.remove('twin-preview', 'twin-night');
+      window.__twinNight = false;
       destroyMiniMaps(false);                        /* 关闭孪生：销毁全部小地图实例 */
-      if (cardsEl) cardsEl.hidden = true;
+      if (cardsEl) { cardsEl.hidden = true; cardsEl.classList.remove('twin-stagger'); }
       document.body.classList.remove('twin-open');   /* V7.2-beta 恢复高德原生控件 */
       if (overlay) overlay.hidden = true;
       if (svg) svg.classList.remove('twin-spawn');
@@ -1938,5 +2129,219 @@
       _enter();
       setTimeout(function () { window.MapModule.setDark(); }, 500);
     };
+  })();
+})();
+
+/* ============================================================
+   V7.3 增量：微音效 / 磁吸按钮 / 惯性滚动 / 数据管理面板
+   - 音效：Web Audio 动态生成（零音频文件），音量 0.08，默认静音 zxsj66_mute='1'，
+     惰性 AudioContext（首次用户交互后创建），「我的-数据管理」提供开关
+   - 磁吸：仅 hover:hover 且 pointer:fine 生效；移动端退化为 :active scale(0.95)
+   - 惯性滚动：自写 momentum（摩擦系数 0.95）；容器已有 scroll-behavior:smooth 则跳过
+   ============================================================ */
+(function () {
+  'use strict';
+  function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
+  var RM = false;
+  try { RM = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) {}
+  var FINE_POINTER = false;
+  try { FINE_POINTER = window.matchMedia && window.matchMedia('(hover: hover) and (pointer: fine)').matches; } catch (e) {}
+
+  /* ================= 模块三-3：微音效系统 ================= */
+  var Sfx = (function () {
+    var ctx = null;
+    function muted() { try { return localStorage.getItem('zxsj66_mute') !== '0'; } catch (e) { return true; } }   /* 默认静音 */
+    function ac() {
+      if (muted()) return null;
+      if (!ctx) { try { ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return null; } }
+      if (ctx.state === 'suspended') { try { ctx.resume(); } catch (e) {} }
+      return ctx;
+    }
+    function tone(freq, ms, swell) {
+      var c = ac(); if (!c) return;
+      try {
+        var o = c.createOscillator(), g = c.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        var t0 = c.currentTime, vol = 0.08, dur = ms / 1000;
+        if (swell) {
+          g.gain.setValueAtTime(0.0001, t0);
+          g.gain.exponentialRampToValueAtTime(vol, t0 + dur * 0.4);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        } else {
+          g.gain.setValueAtTime(vol, t0);
+          g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        }
+        o.connect(g); g.connect(c.destination);
+        o.start(t0); o.stop(t0 + dur + 0.02);
+      } catch (e) {}
+    }
+    return {
+      play: function (kind) {
+        if (kind === 'view') tone(220, 50);            /* 切换视图 */
+        else if (kind === 'open3d') tone(110, 200, 1); /* 打开 3D：低音渐强 */
+        else tone(440, 30);                            /* 按钮点击 */
+      },
+      muted: muted,
+      setMuted: function (m) { try { localStorage.setItem('zxsj66_mute', m ? '1' : '0'); } catch (e) {} }
+    };
+  })();
+  window.__sfx = Sfx;
+  /* 视图切换音（包装统一入口，幂等；同一视图重复点击不重复发声） */
+  (function () {
+    var _sv = window.switchView;
+    if (!_sv) return;
+    var lastV = 'search';
+    window.switchView = function (v) {
+      if (v !== lastV && window.__sfx) window.__sfx.play('view');
+      lastV = v;
+      _sv(v);
+    };
+  })();
+  /* 按钮点击音（导航走 view 音，不重复发声） */
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('button, .chip, .tab');
+    if (!b) return;
+    Sfx.play('click');
+  });
+
+  /* ================= 模块三-2：磁吸按钮（仅桌面精确指针） ================= */
+  function magnetize(el) {
+    if (!el || el.__mag) return;
+    el.__mag = 1;
+    el.addEventListener('mousemove', function (e) {
+      var r = el.getBoundingClientRect();
+      var dx = (e.clientX - r.left - r.width / 2) / (r.width / 2);
+      var dy = (e.clientY - r.top - r.height / 2) / (r.height / 2);
+      el.style.transition = 'transform .12s cubic-bezier(0.25,0.1,0.25,1)';
+      el.style.transform = 'translate(' + (dx * 6).toFixed(1) + 'px,' + (dy * 6).toFixed(1) + 'px)';
+    });
+    el.addEventListener('mouseleave', function () {
+      el.style.transition = 'transform .3s cubic-bezier(0.25,0.1,0.25,1)';   /* spring 回弹 */
+      el.style.transform = '';
+    });
+  }
+  if (FINE_POINTER && !RM) {
+    magnetize(document.getElementById('twinEntry'));   /* 数字孪生入口 */
+    document.addEventListener('mouseover', function (e) {   /* 「问AI」为动态元素，懒绑定 */
+      var b = e.target.closest && e.target.closest('.twin-askai');
+      if (b) magnetize(b);
+    });
+  }
+
+  /* ================= 模块三-1：惯性滚动（momentum，摩擦系数 0.95） ================= */
+  function attachMomentum(el) {
+    if (!el || el.__momBound) return;
+    el.__momBound = 1;
+    if (getComputedStyle(el).scrollBehavior === 'smooth') return;   /* 已有原生平滑滚动：跳过，禁双重滚动 */
+    if (!('ontouchstart' in window)) return;                        /* 仅触屏接管；桌面滚轮走原生 */
+    var tracking = false, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, vx = 0, vy = 0, axis = null, raf = null;
+    el.addEventListener('touchstart', function (e) {
+      if (raf) { cancelAnimationFrame(raf); raf = null; }
+      tracking = true; axis = null; vx = vy = 0;
+      sx = lx = e.touches[0].clientX; sy = ly = e.touches[0].clientY; lt = performance.now();
+    }, { passive: true });
+    el.addEventListener('touchmove', function (e) {
+      if (!tracking) return;
+      var x = e.touches[0].clientX, y = e.touches[0].clientY;
+      if (!axis) {
+        var dx = Math.abs(x - sx), dy = Math.abs(y - sy);
+        if (dx < 6 && dy < 6) return;
+        var canX = el.scrollWidth > el.clientWidth + 4, canY = el.scrollHeight > el.clientHeight + 4;
+        axis = (canY && (!canX || dy >= dx)) ? 'y' : (canX ? 'x' : null);
+        if (!axis) { tracking = false; return; }
+      }
+      e.preventDefault();   /* 接管滚动（自写惯性），杜绝与原生叠加 */
+      var t = performance.now(), dt = Math.max(1, t - lt);
+      if (axis === 'y') { el.scrollTop += (ly - y); vy = (ly - y) / dt * 16; }
+      else { el.scrollLeft += (lx - x); vx = (lx - x) / dt * 16; }
+      lx = x; ly = y; lt = t;
+    }, { passive: false });
+    el.addEventListener('touchend', function () {
+      tracking = false;
+      var v = axis === 'y' ? vy : vx;
+      if (Math.abs(v) < 2 || RM) return;      /* reduced-motion：不播惯性动画 */
+      v *= 8;
+      (function step() {
+        v *= 0.95;                            /* 摩擦系数 0.95 */
+        if (axis === 'y') el.scrollTop += v; else el.scrollLeft += v;
+        if (Math.abs(v) > 0.5) raf = requestAnimationFrame(step); else raf = null;
+      })();
+    }, { passive: true });
+  }
+  /* 应用容器：孪生点位列表 / 问卷面板 / 学习彩蛋 / 地图抽屉 / 搜索建议
+     （指南页长文为页面级滚动且 html 已是 scroll-behavior:smooth，按规则跳过） */
+  attachMomentum(document.querySelector('.suggest-box'));
+  attachMomentum(document.querySelector('.survey-body'));
+  attachMomentum(document.querySelector('.study-body'));
+  attachMomentum(document.querySelector('.drawer-list'));
+  /* 孪生列表为打开时动态创建：包装 Twin.open 后懒绑定 */
+  (function () {
+    if (!window.TwinModule) return;
+    var _open = window.TwinModule.open;
+    window.TwinModule.open = function () {
+      _open();
+      attachMomentum(document.getElementById('twinList'));
+    };
+  })();
+
+  /* ================= 模块零-5：「我的」数据管理面板 ================= */
+  (function dataPanelInit() {
+    var head = document.getElementById('dataHeader');
+    var body = document.getElementById('dataBody');
+    if (!head || !body || !window.ZXSJ) return;
+    var DS = window.ZXSJ.DataSource;
+    var arrow = document.getElementById('dataArrow');
+    var realStatus = document.getElementById('realStatus');
+    var realClear = document.getElementById('realClear');
+    var wxStatus = document.getElementById('weatherStatus');
+    var soundToggle = document.getElementById('soundToggle');
+    function toast(m) { if (window.__toast) window.__toast(m); }
+    function refreshDataStatus() {
+      var n = DS.realCount();
+      realStatus.textContent = n ? ('已导入 ' + n + ' 条实测数据（优先于模拟，状态点带「实测」角标）') : '未导入（当前为模拟数据）';
+      realClear.hidden = !n;
+      var cfg = window.WEATHER_CONFIG || {};
+      var w = DS.getWeather();
+      var wText = { sunny: '晴天', rain: '雨天', snow: '雪天' }[w.condition] || w.condition;
+      wxStatus.textContent = cfg.KEY
+        ? ('已配置 · 当前 ' + wText + ' ' + w.temp + '°（30 分钟缓存）')
+        : ('未配置 Key（默认晴天）· 当前按' + wText + '展示');
+      soundToggle.checked = !Sfx.muted();
+    }
+    head.addEventListener('click', function () {
+      var show = body.hidden;
+      body.hidden = !show;
+      arrow.textContent = show ? '▾' : '▸';
+      if (show) refreshDataStatus();
+    });
+    document.getElementById('realImport').addEventListener('click', function () {
+      document.getElementById('realFile').click();
+    });
+    document.getElementById('realFile').addEventListener('change', function (e) {
+      var f = e.target.files && e.target.files[0];
+      if (!f) return;
+      var rd = new FileReader();
+      rd.onload = function () {
+        try {
+          var arr = JSON.parse(rd.result);
+          var r = DS.importRealData(arr);
+          if (r.ok) { toast('已导入 ' + r.count + ' 条实测数据，全站状态点已切换为实测'); }
+          else { toast('导入失败：' + r.err); }
+        } catch (err) { toast('导入失败：JSON 解析错误'); }
+        refreshDataStatus();
+        e.target.value = '';
+      };
+      rd.readAsText(f);
+    });
+    realClear.addEventListener('click', function () {
+      DS.clearRealData();
+      toast('已清除实测数据，恢复模拟数据源');
+      refreshDataStatus();
+    });
+    soundToggle.addEventListener('change', function () {
+      Sfx.setMuted(!soundToggle.checked);
+      toast(soundToggle.checked ? '交互音效已开启' : '交互音效已静音');
+      if (soundToggle.checked) Sfx.play('click');
+    });
   })();
 })();

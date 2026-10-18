@@ -1,9 +1,16 @@
 /* ============================================================
-   智行江畔 V7.2 —— 数字孪生 3D 建模查看器
+   智行江畔 V7.3 —— 数字孪生 3D 建模查看器（沉浸式升级版）
    技术底座：Three.js r147 UMD（本地 js/vendor/，file:// 与 http:// 均可运行，零 CDN 依赖）
    仅使用 OrbitControls 一个附加控件，全部模型程序化生成，零外部资源文件
    层级表：地图100 < 孪生200 < AI300 < 彩蛋400 < 3D查看器500
-   性能红线：同时仅一个渲染循环；关闭即释放；DPR≤2；低端机关阴影
+   性能红线：同时仅一个渲染循环（呼吸/颤抖/粒子/剖面全部注册进同一 RAF）；
+             粒子 ≤1 组且 ≤100；关闭即释放；DPR≤2；低端机关阴影/颤抖/粒子
+   V7.3 新增：
+     ① 建筑呼吸：scaleY 1.0~1.02 正弦 3s（原点底部防穿模）；红>85% 加 10Hz 微颤抖；绿<30% 停动
+     ② 人流粒子：拥挤度>60% 触发，数量=floor(百分比/2)，门口进出，颜色同状态色
+     ③ 剖面查看器：双击建筑或「▤」按钮，clipping plane 沿 Y 剖开 500ms，楼层读 spot.floors
+     ④ 夜景灯光：随时间轴时刻（window.__twinNight）切换窗户发光与主光强度
+     ⑤ 雨天联动：仅整体变暗（灯光 ×0.8），禁改 roughness/clearcoat 防重编译
    降级：WebGL 不可用 → 孪生 3D 按钮置灰 + tooltip，其余功能不受影响
    自检降级路径可用 ?no3d=1 强制模拟无 WebGL 环境
    ============================================================ */
@@ -48,7 +55,7 @@ var BUILDERS = {
     main.position.y = 2; g.add(main);
     var roof = new THREE.Mesh(new THREE.ConeGeometry(6.2, 2.6, 4), mat(PAL.roof, 0.75));
     roof.position.y = 5.3; roof.rotation.y = Math.PI / 4; g.add(roof);
-    /* 窗户阵列：InstancedMesh 小平面 + 发光材质 */
+    /* 窗户阵列：InstancedMesh 小平面 + 发光材质（夜景时增强发光） */
     var winGeo = new THREE.PlaneGeometry(0.8, 0.9);
     var winMat = new THREE.MeshStandardMaterial({ color: 0xFFE9C4, emissive: 0xFFD9A0, emissiveIntensity: 0.55, roughness: 0.6 });
     var cols = 6, rowsN = 2, total = cols * rowsN * 2;
@@ -159,7 +166,7 @@ function open(opts) {
   if (viewer) close();                       /* 性能红线：同时只存在一个渲染循环 */
   var REDUCED = false;
   try { REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
-  var LOWEND = (navigator.hardwareConcurrency || 8) <= 4;
+  var LOWEND = (navigator.hardwareConcurrency || 8) <= 4 || (navigator.deviceMemory || 8) <= 4;
 
   /* DOM：fixed 全屏玻璃拟态层 z-index 500 */
   var wrap = document.createElement('div');
@@ -168,10 +175,11 @@ function open(opts) {
     '<div class="v3d-topbar"><div class="v3d-title"><b>' + esc(opts.name) + '</b>' +
     '<span class="v3d-kind">' + esc(opts.type || opts.kind || '') + '</span></div>' +
     '<div class="v3d-tools">' +
+    '<button class="v3d-btn" id="v3dSec" title="查看楼层">▤</button>' +
     '<button class="v3d-btn" id="v3dFs" title="全屏">⛶</button>' +
     '<button class="v3d-btn" id="v3dX" title="关闭">✕</button></div></div>' +
     '<div class="v3d-stage" id="v3dStage"></div>' +
-    '<p class="v3d-hint">拖拽旋转 · 滚轮缩放 · 双击全屏</p>';
+    '<p class="v3d-hint">拖拽旋转 · 滚轮缩放 · 双击建筑查看楼层 · 双击空白全屏</p>';
   document.body.appendChild(wrap);
   document.body.style.overflow = 'hidden';   /* 防页面滚动穿透 */
 
@@ -193,10 +201,13 @@ function open(opts) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));   /* DPR 上限 2 */
   renderer.setSize(stage.clientWidth, stage.clientHeight);
   if (!LOWEND) renderer.shadowMap.enabled = true;                      /* 低端机关阴影 */
+  renderer.localClippingEnabled = true;                                /* V7.3 剖面查看器 */
   stage.appendChild(renderer.domElement);
 
   scene = new THREE.Scene();
-  scene.fog = new THREE.Fog(new THREE.Color(cssVar('--bg-primary', '#05070D')), 30, 70);
+  var fogDay = new THREE.Color(cssVar('--bg-primary', '#05070D'));
+  var fogNight = new THREE.Color('#02040A');
+  scene.fog = new THREE.Fog(fogDay.clone(), 30, 70);
 
   camera = new THREE.PerspectiveCamera(45, stage.clientWidth / stage.clientHeight, 0.1, 200);
   camera.position.set(14, 12, 18);
@@ -208,11 +219,13 @@ function open(opts) {
   controls.minDistance = 8; controls.maxDistance = 40;
 
   /* 灯光：主光 + 弱环境光 + 底部 Accent 蓝点光（科技感来源） */
-  var key = new THREE.DirectionalLight(0xFFFFFF, 1.1);
+  var KEY_BASE = 1.1, AMB_BASE = 0.35;
+  var key = new THREE.DirectionalLight(0xFFFFFF, KEY_BASE);
   key.position.set(10, 16, 8);
   if (!LOWEND) { key.castShadow = true; key.shadow.mapSize.set(1024, 1024); }
   scene.add(key);
-  scene.add(new THREE.AmbientLight(0xFFFFFF, 0.35));
+  var amb = new THREE.AmbientLight(0xFFFFFF, AMB_BASE);
+  scene.add(amb);
   var accentLight = new THREE.PointLight(0x0A84FF, 14, 26);
   accentLight.position.set(0, 0.6, 0); scene.add(accentLight);
 
@@ -255,6 +268,75 @@ function open(opts) {
   model.add(bodyGroup);
   scene.add(model);
 
+  /* V7.3 夜景：收集发光材质（窗户/招牌），夜间增强发光；主光减弱、雾色加深 */
+  var glowMats = [];
+  bodyGroup.traverse(function (o) {
+    if (o.isMesh && o.material && o.material.emissive && o.material.emissiveIntensity > 0.2) {
+      if (glowMats.every(function (g2) { return g2.m !== o.material; }))
+        glowMats.push({ m: o.material, base: o.material.emissiveIntensity });
+    }
+  });
+
+  /* V7.3 人流粒子系统：预分配 100 上限，drawRange 控制数量（零重建零 GC 抖动） */
+  var MAX_P = 100;
+  var pGeo = new THREE.BufferGeometry();
+  var pPos = new Float32Array(MAX_P * 3);
+  var pVel = new Float32Array(MAX_P);        /* 每粒子 z 向速度（正=出门，负=进门） */
+  var pOff = new Float32Array(MAX_P * 2);    /* x/y 随机偏移 */
+  for (var pi = 0; pi < MAX_P; pi++) {
+    pPos[pi * 3] = (Math.random() - 0.5) * 5;
+    pPos[pi * 3 + 1] = 0.3 + Math.random() * 1.4;
+    pPos[pi * 3 + 2] = 4.5 + Math.random() * 6;
+    pVel[pi] = (Math.random() < 0.55 ? 1 : -1) * (0.04 + Math.random() * 0.06);
+    pOff[pi * 2] = (Math.random() - 0.5) * 0.02;
+    pOff[pi * 2 + 1] = 0;
+  }
+  pGeo.setAttribute('position', new THREE.BufferAttribute(pPos, 3));
+  var pMat = new THREE.PointsMaterial({ color: baseColor.clone(), size: 0.32, transparent: true, opacity: 0.9, sizeAttenuation: true });
+  var points = new THREE.Points(pGeo, pMat);
+  points.visible = false;
+  scene.add(points);
+
+  /* V7.3 剖面查看器：clipping plane 沿 Y 剖开（数据读 spot.floors，无则提示待补充） */
+  var clipPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 99);   /* 常数 99 = 不裁剪 */
+  var clipMats = [];
+  bodyGroup.traverse(function (o) {
+    if (o.isMesh && o.material && clipMats.indexOf(o.material) === -1) clipMats.push(o.material);
+  });
+  var sec = { on: false, anim: 0, from: 99, to: 99 };
+  var SEC_TOP = 12, SEC_CUT = 2.6, SEC_MS = 500;
+  var floorsEl = document.createElement('div');
+  floorsEl.className = 'v3d-floors';
+  floorsEl.hidden = true;
+  (function () {
+    var sp = null;
+    (window.spots || []).concat(window.surroundingSpots || []).forEach(function (s) { if (s.id === opts.id) sp = s; });
+    var fs = sp && sp.floors;
+    floorsEl.innerHTML = '<b>楼层导览</b>' + (fs && fs.length
+      ? '<ul>' + fs.map(function (f) { return '<li>' + esc(f) + '</li>'; }).join('') + '</ul>'
+      : '<p class="v3d-floors-empty">楼层信息待补充</p>');
+  })();
+  wrap.appendChild(floorsEl);
+  function setClip(c) { clipPlane.constant = c; }
+  function applyClip(on) {
+    clipMats.forEach(function (m) {
+      m.clippingPlanes = on ? [clipPlane] : null;
+      m.needsUpdate = true;
+    });
+  }
+  function toggleSection() {
+    if (sec.anim) return;
+    if (!sec.on) {
+      sec.on = true; sec.from = SEC_TOP; sec.to = SEC_CUT; sec.anim = performance.now();
+      applyClip(true);
+      floorsEl.hidden = false;
+    } else {
+      sec.from = SEC_CUT; sec.to = SEC_TOP; sec.anim = performance.now();
+      floorsEl.hidden = true;
+    }
+  }
+  wrap.querySelector('#v3dSec').addEventListener('click', toggleSection);
+
   /* 打开动效：scale 0.6 + opacity 0 → 1，300ms ease-apple */
   var introStart = performance.now();
   var fadeMats = [];
@@ -263,7 +345,6 @@ function open(opts) {
   });
   if (REDUCED) { model.scale.set(1, 1, 1); fadeMats.forEach(function (m) { m.opacity = 1; }); }
 
-  var easeApple = null; /* 动画曲线用三次方缓出近似 var(--ease-apple) */
   function onResize() {
     if (disposed || !renderer) return;
     camera.aspect = stage.clientWidth / stage.clientHeight;
@@ -271,10 +352,18 @@ function open(opts) {
     renderer.setSize(stage.clientWidth, stage.clientHeight);
   }
   window.addEventListener('resize', onResize);
+
+  /* 天气缓存：约每 2 秒读一次 DataSource（避免每帧 JSON.parse） */
+  var wxTick = 0, wxCond = 'sunny';
+  /* 颤抖节流（10Hz） */
+  var lastTrem = 0;
+  var fsSync = 0;
+
   function tick(now) {
     if (disposed) return;
     raf = requestAnimationFrame(tick);
-    if ((fsSync++ & 31) === 0) wrap.classList.toggle('fs', !!document.fullscreenElement);
+    if ((fsSync & 31) === 0) wrap.classList.toggle('fs', !!document.fullscreenElement);
+    fsSync++;
     /* 进入动画 300ms */
     if (!REDUCED) {
       var k = Math.min(1, (now - introStart) / 300);
@@ -284,20 +373,82 @@ function open(opts) {
     }
     /* 地台颜色实时同步（复用状态引擎刷新通道，无新定时器） */
     var st = opts.getState();
+    var pct = Math.round((st.p || 0) * 100);
     var c = new THREE.Color(levelColor(st.level));
     baseMat.color.lerp(c, 0.12); baseMat.emissive.lerp(c, 0.12);
     haloMat.color.lerp(c, 0.12);
-    /* 光晕呼吸：查看器内唯一循环动画（60% 占空比缓慢缩放） */
+    /* 光晕呼吸：查看器内唯二循环动画之一（60% 占空比缓慢缩放） */
     var ph = (now % 4000) / 4000;
     var s = ph < 0.3 ? 0.55 + (ph / 0.3) * 0.63 : (ph < 0.6 ? 1.18 : 1.18 - ((ph - 0.6) / 0.4) * 0.63);
     halo.scale.setScalar(s);
     haloMat.opacity = 0.28 * (1.2 - s * 0.45);
+
+    /* V7.3 建筑呼吸：scaleY 1.0~1.02 正弦 3s，原点在底部（子网格 y≥0，底部恒贴地不穿模）。
+       绿 <30% 停动；红 >85% 叠加 ±0.005 / 10Hz 微颤抖（低端机关闭） */
+    if (!REDUCED) {
+      if (pct < 30) {
+        bodyGroup.scale.y = 1;
+        bodyGroup.position.x = 0; bodyGroup.position.z = 0;
+      } else {
+        bodyGroup.scale.y = 1 + 0.01 * (1 + Math.sin(now / 1000 * Math.PI * 2 / 3));
+        if (pct > 85 && !LOWEND && now - lastTrem >= 100) {
+          lastTrem = now;
+          bodyGroup.position.x = (Math.random() - 0.5) * 0.01;
+          bodyGroup.position.z = (Math.random() - 0.5) * 0.01;
+        }
+      }
+    }
+
+    /* V7.3 人流粒子：拥挤度 >60% 触发，数量 = floor(百分比/2)，上限 100 */
+    if (!LOWEND && !REDUCED && pct > 60) {
+      var cnt = Math.min(MAX_P, Math.floor(pct / 2));
+      points.visible = true;
+      pGeo.setDrawRange(0, cnt);
+      pMat.color.lerp(c, 0.15);
+      for (var i = 0; i < cnt; i++) {
+        pPos[i * 3 + 2] += pVel[i];
+        pPos[i * 3] += pOff[i * 2];
+        if (pPos[i * 3 + 2] > 11 || pPos[i * 3 + 2] < 4.2) {
+          pPos[i * 3 + 2] = pVel[i] > 0 ? 4.5 : 10.8;   /* 到界回门口/远端，循环进出 */
+          pPos[i * 3] = (Math.random() - 0.5) * 5;
+        }
+      }
+      pGeo.attributes.position.needsUpdate = true;
+    } else {
+      points.visible = false;
+    }
+
+    /* V7.3 剖面动画：500ms ease-apple，沿 Y 切开/合拢 */
+    if (sec.anim) {
+      var sk = Math.min(1, (now - sec.anim) / SEC_MS);
+      var se = 1 - Math.pow(1 - sk, 3);
+      setClip(sec.from + (sec.to - sec.from) * se);
+      if (sk >= 1) {
+        sec.anim = 0;
+        if (sec.to === SEC_TOP) { sec.on = false; applyClip(false); }   /* 合拢完成后移除裁剪面 */
+      }
+    }
+
+    /* V7.3 夜景 + 雨天：只调灯光强度与雾色（禁改 roughness/clearcoat，防材质重编译） */
+    if ((wxTick & 127) === 0) {
+      wxCond = (window.ZXSJ && ZXSJ.DataSource) ? ZXSJ.DataSource.getWeather().condition : 'sunny';
+    }
+    wxTick++;
+    var nightK = window.__twinNight ? 1 : 0;
+    var dimK = (wxCond === 'rain' || wxCond === 'snow') ? 0.8 : 1;   /* 雨天整体变暗 0.8 */
+    key.intensity += (KEY_BASE * dimK * (1 - 0.45 * nightK) - key.intensity) * 0.08;
+    amb.intensity += (AMB_BASE * dimK * (1 - 0.25 * nightK) - amb.intensity) * 0.08;
+    glowMats.forEach(function (g2) {
+      g2.m.emissiveIntensity += (g2.base * (1 + 1.3 * nightK) - g2.m.emissiveIntensity) * 0.08;
+    });
+    scene.fog.color.lerp(nightK ? fogNight : fogDay, 0.06);
+
     controls.update();
     renderer.render(scene, camera);
   }
   raf = requestAnimationFrame(tick);
 
-  /* 交互：全屏切换（按钮或双击画布），ESC 由浏览器原生处理退出全屏 */
+  /* 交互：全屏切换（按钮或双击空白处）；双击建筑 → 剖面查看器 */
   function toggleFs() {
     if (!document.fullscreenElement) {
       (wrap.requestFullscreen || wrap.webkitRequestFullscreen || function(){}).call(wrap);
@@ -308,7 +459,16 @@ function open(opts) {
     }
   }
   wrap.querySelector('#v3dFs').addEventListener('click', toggleFs);
-  renderer.domElement.addEventListener('dblclick', toggleFs);
+  var raycaster = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  renderer.domElement.addEventListener('dblclick', function (ev) {
+    var rect = renderer.domElement.getBoundingClientRect();
+    ndc.x = ((ev.clientX - rect.left) / rect.width) * 2 - 1;
+    ndc.y = -((ev.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(ndc, camera);
+    var hits = raycaster.intersectObjects(bodyGroup.children, true);
+    if (hits.length) toggleSection();   /* 双击建筑 → 楼层剖面 */
+    else toggleFs();                    /* 双击空白 → 全屏 */
+  });
   document.addEventListener('fullscreenchange', onFsChange);
   function onFsChange() { wrap.classList.toggle('fs', !!document.fullscreenElement); }
   /* ESC：全屏时退出全屏（兜底：某些环境 fullscreenchange 不触发，逐帧对齐 fs 类） */
@@ -319,7 +479,6 @@ function open(opts) {
     }
   }
   document.addEventListener('keydown', onEsc);
-  var fsSync = 0;
 
   function close() {
     if (disposed) return;
@@ -329,9 +488,10 @@ function open(opts) {
     document.removeEventListener('fullscreenchange', onFsChange);
     document.removeEventListener('keydown', onEsc);
     if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) {} }
-    /* 完全释放：geometry/material 显存 + renderer */
+    applyClip(false);
+    /* 完全释放：geometry/material 显存 + renderer + 粒子系统 */
     scene.traverse(function (o) {
-      if (o.isMesh) {
+      if (o.isMesh || o.isPoints) {
         if (o.geometry) o.geometry.dispose();
         var ms = Array.isArray(o.material) ? o.material : [o.material];
         ms.forEach(function (m) { for (var k in m) { if (m[k] && m[k].isTexture) m[k].dispose(); } m.dispose(); });
